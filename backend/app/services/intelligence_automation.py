@@ -317,16 +317,27 @@ def collect_ioc_source(db: Session, source: IoCSource) -> dict:
         raise
 
 
-def run_all(db: Session) -> dict:
+def _is_due(last_run_at: str, interval_minutes: int) -> bool:
+    if not last_run_at:
+        return True
+    try:
+        last = datetime.fromisoformat(last_run_at)
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - last).total_seconds()
+        return age >= max(15, interval_minutes) * 60
+    except ValueError:
+        return True
+
+
+def run_all(db: Session, force: bool = False) -> dict:
     seed_default_sources(db)
     result = {"intel": {}, "iocs": {}, "knowledge_base": {}}
-    result["knowledge_base"] = scan_knowledge_base(db)\n    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():
-        try:
+    result["knowledge_base"] = scan_knowledge_base(db)\n    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():\n        if not force and not _is_due(source.last_run_at, source.interval_minutes):\n            continue\n        try:
             result["intel"][source.name] = collect_intel_source(db, source)
         except Exception as exc:
             result["intel"][source.name] = {"error": str(exc)}
-    for source in db.query(IoCSource).filter(IoCSource.enabled.is_(True)).all():
-        try:
+    for source in db.query(IoCSource).filter(IoCSource.enabled.is_(True)).all():\n        if not force and not _is_due(source.last_run_at, source.interval_minutes):\n            continue\n        try:
             result["iocs"][source.name] = collect_ioc_source(db, source)
         except Exception as exc:
             result["iocs"][source.name] = {"error": str(exc)}
