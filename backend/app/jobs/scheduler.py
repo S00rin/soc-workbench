@@ -26,7 +26,7 @@ def _collect_intelligence() -> None:
             return intelligence_automation.run_all(db)
         finally:
             db.close()
-    job_service.submit("intelligence", "Scheduled intel and IoC refresh", worker)
+    job_service.submit("intelligence", "Scheduled intel, KB, and IoC refresh", worker)
 
 
 def start_scheduler() -> BackgroundScheduler:
@@ -39,7 +39,7 @@ def start_scheduler() -> BackgroundScheduler:
         replace_existing=True, coalesce=True, max_instances=1,
     )
     _scheduler.add_job(
-        _collect_intelligence, IntervalTrigger(hours=1), id="intelligence_refresh",
+        _collect_intelligence, IntervalTrigger(minutes=15), id="intelligence_refresh",
         replace_existing=True, coalesce=True, max_instances=1,
     )
     _scheduler.start()
