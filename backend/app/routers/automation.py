@@ -62,6 +62,28 @@ def create_intel_source(payload: IntelSourceIn, db: Session = Depends(get_db),
     return _row(row)
 
 
+@router.put("/intel-sources/{source_id}")
+def update_intel_source(source_id: int, payload: IntelSourceIn,
+                        db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    row = db.get(IntelSource, source_id)
+    if not row:
+        raise HTTPException(404, "Intel source not found")
+    for field, value in payload.model_dump().items():
+        setattr(row, field, value)
+    db.commit(); db.refresh(row)
+    return _row(row)
+
+
+@router.delete("/intel-sources/{source_id}")
+def delete_intel_source(source_id: int, db: Session = Depends(get_db),
+                        _: str = Depends(get_current_user)):
+    row = db.get(IntelSource, source_id)
+    if not row:
+        raise HTTPException(404, "Intel source not found")
+    db.delete(row); db.commit()
+    return {"ok": True}
+
+
 @router.post("/intel-sources/{source_id}/run")
 def run_intel_source(source_id: int, db: Session = Depends(get_db),
                      _: str = Depends(get_current_user)):
@@ -90,6 +112,30 @@ def create_ioc_source(payload: IoCSourceIn, db: Session = Depends(get_db),
     return _row(row)
 
 
+@router.put("/ioc-sources/{source_id}")
+def update_ioc_source(source_id: int, payload: IoCSourceIn,
+                      db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    row = db.get(IoCSource, source_id)
+    if not row:
+        raise HTTPException(404, "IoC source not found")
+    if payload.adapter not in intelligence_automation.ADAPTERS:
+        raise HTTPException(400, "Unsupported adapter")
+    for field, value in payload.model_dump().items():
+        setattr(row, field, value)
+    db.commit(); db.refresh(row)
+    return _row(row)
+
+
+@router.delete("/ioc-sources/{source_id}")
+def delete_ioc_source(source_id: int, db: Session = Depends(get_db),
+                      _: str = Depends(get_current_user)):
+    row = db.get(IoCSource, source_id)
+    if not row:
+        raise HTTPException(404, "IoC source not found")
+    db.delete(row); db.commit()
+    return {"ok": True}
+
+
 @router.post("/ioc-sources/{source_id}/run")
 def run_ioc_source(source_id: int, db: Session = Depends(get_db),
                    _: str = Depends(get_current_user)):
@@ -100,6 +146,12 @@ def run_ioc_source(source_id: int, db: Session = Depends(get_db),
         return intelligence_automation.collect_ioc_source(db, row)
     except Exception as exc:
         raise HTTPException(400, str(exc))
+
+
+@router.post("/knowledge-to-iocs")
+def knowledge_to_iocs(item_id: int | None = None, db: Session = Depends(get_db),
+                      _: str = Depends(get_current_user)):
+    return intelligence_automation.scan_knowledge_base(db, item_id=item_id)
 
 
 @router.post("/run-all")
