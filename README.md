@@ -158,20 +158,18 @@ No license file is included yet — all rights reserved by default. Add a
 
 ## Intelligence and Claude automation
 
-The **Automation** page provides three local workflows:
+The **Automation** page provides editable news/IoC sources (add, update, disable,\ndelete, or run on demand) and three local workflows:
 
 - Scheduled RSS/Atom collection with SOC scope scoring. Cloud security, API
   security, Web3, and cryptocurrency-only content is rejected. Accepted items
   are saved directly to the Knowledge Base and their IoCs are extracted.
 - Built-in IoC adapters for ThreatFox, URLhaus, and CISA KEV. Values are
-  normalized, non-public IPv4 addresses are rejected, and source observations
-  are retained for correlation.
+  normalized, non-public IPv4 addresses are rejected, and source observations\n  are retained for correlation. All Knowledge Base content is also scanned for\n  valid indicator-shaped values during scheduled and on-demand runs.
 - Claude Code tasks in `plan`, `read-only`, or `edit` mode. Task
   workspaces must be under `CLAUDE_WORKSPACE_ROOT`. Edit mode permits file
   editing but does not enable Bash or bypass Claude Code permissions.
 
-The scheduler starts with the application and refreshes intelligence every
-hour. Manual collection is available from the Automation page or through
+The scheduler starts with the application, polls every 15 minutes, and runs each\nsource according to its editable interval. Manual collection is available from the Automation page or through
 `POST /api/automation/run-all`.
 
 > Claude Code must be installed and authenticated on the host running SOC
