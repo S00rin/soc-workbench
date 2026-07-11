@@ -36,8 +36,26 @@ def utcnow() -> str:
 
 
 def seed_default_sources(db: Session) -> None:
-    if db.query(IoCSource).count() == 0:
-        db.add_all([
+    default_intel = [
+        ("Mandiant / Google Threat Intelligence", "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v", 0.95),
+        ("FortiGuard Labs Threat Research", "https://feeds.fortinet.com/fortinet/blog/threat-research", 0.90),
+        ("Unit 42 Threat Research", "https://unit42.paloaltonetworks.com/feed/", 0.90),
+        ("Microsoft Security Threat Intelligence", "https://www.microsoft.com/en-us/security/blog/topic/threat-intelligence/feed/", 0.90),
+        ("Cisco Talos Intelligence", "https://blog.talosintelligence.com/rss/", 0.90),
+        ("SANS Internet Storm Center", "https://isc.sans.edu/rssfeed.xml", 0.85),
+        ("Reddit r/netsec", "https://www.reddit.com/r/netsec/.rss", 0.60),
+        ("Reddit r/cybersecurity", "https://www.reddit.com/r/cybersecurity/.rss", 0.50),
+        ("Medium Cybersecurity", "https://medium.com/feed/tag/cybersecurity", 0.45),
+        ("Medium Malware", "https://medium.com/feed/tag/malware", 0.50),
+    ]
+    existing_intel = {x.name for x in db.query(IntelSource.name).all()}
+    for name, url, trust in default_intel:
+        if name not in existing_intel:
+            db.add(IntelSource(name=name, url=url, trust_score=trust,
+                               interval_minutes=60, auto_save_kb=True,
+                               auto_extract_iocs=True))
+    existing_ioc = {x.name for x in db.query(IoCSource.name).all()}
+    defaults_ioc = [
             IoCSource(name="ThreatFox Recent IoCs", adapter="threatfox",
                       url="https://threatfox-api.abuse.ch/api/v1/", trust_score=0.85,
                       interval_minutes=180),
@@ -47,8 +65,11 @@ def seed_default_sources(db: Session) -> None:
             IoCSource(name="CISA Known Exploited Vulnerabilities", adapter="cisa_kev",
                       url="https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
                       trust_score=0.95, interval_minutes=360),
-        ])
-        db.commit()
+        ]
+    for source in defaults_ioc:
+        if source.name not in existing_ioc:
+            db.add(source)
+    db.commit()
 
 
 def scope_score(title: str, content: str, trust_score: float = 0.7) -> tuple[float, str]:
@@ -144,6 +165,35 @@ def _extract_item_iocs(db: Session, item: IntelItem) -> int:
                          raw={"intel_url": item.url}, tags=item.tags):
                 count += 1
     return count
+
+
+def scan_knowledge_base(db: Session, item_id: int | None = None) -> dict:
+    """Extract only valid IoC-shaped values from all KB items or one item."""
+    query = db.query(KnowledgeItem)
+    if item_id is not None:
+        query = query.filter(KnowledgeItem.id == item_id)
+    scanned = indicators = 0
+    by_type: dict[str, int] = {}
+    mapping = {"ips": "ipv4", "domains": "domain", "urls": "url",
+               "emails": "email", "hashes": "hash"}
+    for item in query.all():
+        scanned += 1
+        text = "\n".join(x for x in (item.title, item.summary, item.content, item.notes) if x)
+        buckets = entities.extract_iocs(text)
+        for bucket, ioc_type in mapping.items():
+            for value in buckets.get(bucket, []):
+                row = store_ioc(
+                    db, value, ioc_type, f"Knowledge Base #{item.id}",
+                    confidence_score=0.6, raw={"knowledge_id": item.id, "url": item.url},
+                    external_id=f"kb:{item.id}:{ioc_type}:{value}",
+                    tags=["knowledge-base"],
+                )
+                if row:
+                    indicators += 1
+                    by_type[ioc_type] = by_type.get(ioc_type, 0) + 1
+    db.commit()
+    return {"knowledge_items_scanned": scanned, "indicators_processed": indicators,
+            "by_type": by_type}
 
 
 def collect_intel_source(db: Session, source: IntelSource) -> dict:
@@ -269,8 +319,8 @@ def collect_ioc_source(db: Session, source: IoCSource) -> dict:
 
 def run_all(db: Session) -> dict:
     seed_default_sources(db)
-    result = {"intel": {}, "iocs": {}}
-    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():
+    result = {"intel": {}, "iocs": {}, "knowledge_base": {}}
+    result["knowledge_base"] = scan_knowledge_base(db)\n    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():
         try:
             result["intel"][source.name] = collect_intel_source(db, source)
         except Exception as exc:
