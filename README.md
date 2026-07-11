@@ -154,3 +154,26 @@ soc-workbench/
 
 No license file is included yet — all rights reserved by default. Add a
 `LICENSE` file if you intend to share or open-source this project.
+
+
+## Intelligence and Claude automation
+
+The **Automation** page provides three local workflows:
+
+- Scheduled RSS/Atom collection with SOC scope scoring. Cloud security, API
+  security, Web3, and cryptocurrency-only content is rejected. Accepted items
+  are saved directly to the Knowledge Base and their IoCs are extracted.
+- Built-in IoC adapters for ThreatFox, URLhaus, and CISA KEV. Values are
+  normalized, non-public IPv4 addresses are rejected, and source observations
+  are retained for correlation.
+- Claude Code tasks in `plan`, `read-only`, or `edit` mode. Task
+  workspaces must be under `CLAUDE_WORKSPACE_ROOT`. Edit mode permits file
+  editing but does not enable Bash or bypass Claude Code permissions.
+
+The scheduler starts with the application and refreshes intelligence every
+hour. Manual collection is available from the Automation page or through
+`POST /api/automation/run-all`.
+
+> Claude Code must be installed and authenticated on the host running SOC
+> Workbench. Keep `CLAUDE_WORKSPACE_ROOT` narrow; do not point it at your home
+> directory or a directory containing secrets.
