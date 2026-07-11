@@ -56,6 +56,29 @@ class KnowledgeItem(Base, TimestampMixin):
     notes: Mapped[str] = mapped_column(Text, default="")
 
 
+class IntelSource(Base, TimestampMixin):
+    """A configured intelligence source to collect from (Module 5).
+
+    ``kind`` is ``feed`` (RSS/Atom) or ``url`` (single page). ``x`` and
+    ``telegram`` are placeholder kinds that require extra configuration (a
+    Nitter/RSS-bridge URL or a bot token) before they can be collected.
+    """
+
+    __tablename__ = "intel_sources"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), index=True)
+    url: Mapped[str] = mapped_column(Text, default="")
+    kind: Mapped[str] = mapped_column(String(20), default="feed")  # feed/url/x/telegram
+    category: Mapped[str] = mapped_column(String(80), default="Other")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    builtin: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_config: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_collected: Mapped[str] = mapped_column(String(60), default="")
+    last_status: Mapped[str] = mapped_column(Text, default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+
+
 class IntelItem(Base, TimestampMixin):
     """Collected internet intelligence item (Module 5)."""
 

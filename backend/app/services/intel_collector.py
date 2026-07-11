@@ -101,8 +101,14 @@ def collect_url(url: str) -> CollectedItem:
     )
 
 
-def collect_feed(feed_url: str, limit: int = 20) -> list[CollectedItem]:
-    parsed = feedparser.parse(feed_url)
+def collect_feed(feed_url: str, limit: int = 20, timeout: int = 20) -> list[CollectedItem]:
+    # Fetch with an explicit timeout instead of letting feedparser block on the
+    # network with no bound (important for scheduled / bulk collection).
+    try:
+        raw = _fetch_html(feed_url, timeout=timeout)
+        parsed = feedparser.parse(raw)
+    except httpx.HTTPError:
+        parsed = feedparser.parse(feed_url)  # fall back to feedparser's own fetch
     if parsed.bozo and not parsed.entries:
         raise ValueError(f"Could not parse feed: {feed_url}")
     source = parsed.feed.get("title", feed_url)

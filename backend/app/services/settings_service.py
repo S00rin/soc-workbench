@@ -66,6 +66,13 @@ DEFAULTS = {
     # Processing
     "default_protection_mode": ("mask", "processing"),
     "default_optimization_mode": ("balanced", "processing"),
+    # Intel (Module 5) — automatic collection + auto-ingest
+    "intel_auto_collect": ("true", "intel"),   # run scheduled collection
+    "intel_refresh_hours": ("6", "intel"),      # interval between runs
+    "intel_collect_limit": ("20", "intel"),     # max items per feed per run
+    "intel_auto_kb": ("true", "intel"),         # mirror new items into KB
+    "intel_auto_iocs": ("true", "intel"),       # extract IoCs into IoC list
+    "intel_summarize": ("false", "intel"),      # LLM EN/FA summaries on refresh
 }
 
 

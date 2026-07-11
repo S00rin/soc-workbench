@@ -41,8 +41,9 @@ from .routers import (
 )
 from .config import get_settings
 from .database import SessionLocal, init_db
+from .jobs import scheduler
 from .logging_config import get_logger, setup_logging
-from .services import settings_service
+from .services import intel_sources, settings_service
 
 setup_logging()
 logger = get_logger(__name__)
@@ -56,10 +57,13 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         settings_service.seed_defaults(db)
+        intel_sources.seed_sources(db)
     finally:
         db.close()
+    scheduler.start_scheduler()
     logger.info("%s started (env=%s)", app_settings.app_name, app_settings.environment)
     yield
+    scheduler.shutdown_scheduler()
     logger.info("%s shutting down", app_settings.app_name)
 
 

@@ -1,5 +1,5 @@
 """Register all models on the shared Base."""
-from .content import Document, IntelItem, KnowledgeItem
+from .content import Document, IntelItem, IntelSource, KnowledgeItem
 from .core import Job, SensitivePattern, Setting, TokenMapping
 from .entities import (
     Analysis,
@@ -18,6 +18,7 @@ __all__ = [
     "Document",
     "KnowledgeItem",
     "IntelItem",
+    "IntelSource",
     "IoC",
     "Project",
     "Report",
