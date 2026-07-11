@@ -156,7 +156,10 @@ def knowledge_to_iocs(item_id: int | None = None, db: Session = Depends(get_db),
 
 @router.post("/run-all")
 def run_all(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
-    return intelligence_automation.run_all(db, force=True)\n\n\n@router.get("/claude-tasks")
+    return intelligence_automation.run_all(db, force=True)
+
+
+@router.get("/claude-tasks")
 def list_claude_tasks(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     rows = db.query(ClaudeTask).order_by(ClaudeTask.created_at.desc()).limit(100).all()
     return [_row(x) for x in rows]
