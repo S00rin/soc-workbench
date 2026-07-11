@@ -333,11 +333,18 @@ def _is_due(last_run_at: str, interval_minutes: int) -> bool:
 def run_all(db: Session, force: bool = False) -> dict:
     seed_default_sources(db)
     result = {"intel": {}, "iocs": {}, "knowledge_base": {}}
-    result["knowledge_base"] = scan_knowledge_base(db)\n    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():\n        if not force and not _is_due(source.last_run_at, source.interval_minutes):\n            continue\n        try:
+    result["knowledge_base"] = scan_knowledge_base(db)
+    for source in db.query(IntelSource).filter(IntelSource.enabled.is_(True)).all():
+        if not force and not _is_due(source.last_run_at, source.interval_minutes):
+            continue
+        try:
             result["intel"][source.name] = collect_intel_source(db, source)
         except Exception as exc:
             result["intel"][source.name] = {"error": str(exc)}
-    for source in db.query(IoCSource).filter(IoCSource.enabled.is_(True)).all():\n        if not force and not _is_due(source.last_run_at, source.interval_minutes):\n            continue\n        try:
+    for source in db.query(IoCSource).filter(IoCSource.enabled.is_(True)).all():
+        if not force and not _is_due(source.last_run_at, source.interval_minutes):
+            continue
+        try:
             result["iocs"][source.name] = collect_ioc_source(db, source)
         except Exception as exc:
             result["iocs"][source.name] = {"error": str(exc)}
