@@ -108,8 +108,19 @@ def detect(text: str, db: Session | None = None) -> list[Detection]:
                 continue
             found[val] = Detection(label, val, prefix)
 
-    # Longest values first so nested matches replace cleanly.
-    return sorted(found.values(), key=lambda d: len(d.value), reverse=True)
+    # Longest values first so nested matches replace cleanly. Drop any value
+    # that's wholly contained in a longer one (e.g. the bare domain inside an
+    # email or URL) so masking a longer match can't be re-mangled by a masker
+    # for a shorter match nested inside it.
+    by_length = sorted(found.values(), key=lambda d: len(d.value), reverse=True)
+    kept: list[Detection] = []
+    kept_values: list[str] = []
+    for det in by_length:
+        if any(det.value in kv for kv in kept_values):
+            continue
+        kept.append(det)
+        kept_values.append(det.value)
+    return kept
 
 
 # --- Masking helpers ------------------------------------------------------

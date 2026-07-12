@@ -7,10 +7,11 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models.content import IntelItem, IntelSource, KnowledgeItem
+from ..models.content import IntelItem, KnowledgeItem
 from ..security import get_current_user
 from ..services import intel_collector as collector
-from ..services import intel_ingest
+from ..services import llm
+from ..services.settings_service import get_all_resolved
 
 router = APIRouter(prefix="/api/intel", tags=["intel"])
 
@@ -20,8 +21,39 @@ class CollectRequest(BaseModel):
     source: str
     limit: int = 20
     summarize: bool = False  # use LLM for FA/EN summaries
-    to_kb: bool = True       # auto-add to knowledge base
-    to_iocs: bool = True     # auto-extract IoCs
+
+
+def _dedupe_and_store(db: Session, items, summarize: bool):
+    stored = []
+    cfg = llm.config_from_settings(get_all_resolved(db)) if summarize else None
+    for it in items:
+        exists = db.query(IntelItem).filter(IntelItem.content_hash == it.content_hash).first()
+        if exists:
+            continue
+        summary_fa = it.summary_fa
+        summary_en = it.summary_en
+        if summarize and cfg and cfg.has_credentials and it.content:
+            try:
+                out = llm.complete(
+                    "Summarize the article in two short paragraphs: first in English, "
+                    "then in Persian (فارسی). Separate them with '---'.",
+                    it.content[:6000], cfg).text
+                parts = out.split("---")
+                summary_en = parts[0].strip()
+                summary_fa = parts[1].strip() if len(parts) > 1 else summary_fa
+            except llm.LLMError:
+                pass
+        row = IntelItem(
+            title=it.title, original_title=it.original_title, source=it.source,
+            url=it.url, published_at=it.published_at, content=it.content,
+            category=it.category, tags=it.tags, entities=it.entities,
+            summary_en=summary_en, summary_fa=summary_fa,
+            relevance=it.relevance, content_hash=it.content_hash,
+        )
+        db.add(row)
+        stored.append(row)
+    db.commit()
+    return stored
 
 
 @router.post("/collect")
@@ -34,92 +66,10 @@ def collect(req: CollectRequest, db: Session = Depends(get_db),
             items = collector.collect_feed(req.source, req.limit)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(400, f"Collection failed: {e}")
-    stats = intel_ingest.store_items(
-        db, items, summarize=req.summarize, to_kb=req.to_kb, to_iocs=req.to_iocs)
-    return {"collected": len(items), "new": stats["new"],
-            "kb": stats["kb"], "iocs": stats["iocs"],
+    stored = _dedupe_and_store(db, items, req.summarize)
+    return {"collected": len(items), "new": len(stored),
             "items": [{"id": r.id, "title": r.title, "category": r.category,
-                       "relevance": r.relevance, "url": r.url} for r in stats["rows"]]}
-
-
-class CollectAllRequest(BaseModel):
-    limit: int = 20
-    summarize: bool = False
-    to_kb: bool = True
-    to_iocs: bool = True
-
-
-@router.post("/collect-all")
-def collect_all(req: CollectAllRequest, db: Session = Depends(get_db),
-                user: str = Depends(get_current_user)):
-    """Collect from every enabled source; auto-ingest into KB + IoC list."""
-    totals = intel_ingest.run_collection(
-        db, limit=req.limit, summarize=req.summarize,
-        to_kb=req.to_kb, to_iocs=req.to_iocs)
-    return totals
-
-
-# --- Source management ----------------------------------------------------
-
-class SourceIn(BaseModel):
-    name: str
-    url: str = ""
-    kind: str = "feed"  # feed | url | x | telegram
-    category: str = "Other"
-    enabled: bool = True
-    notes: str = ""
-
-
-class SourcePatch(BaseModel):
-    name: str | None = None
-    url: str | None = None
-    kind: str | None = None
-    category: str | None = None
-    enabled: bool | None = None
-    notes: str | None = None
-
-
-@router.get("/sources")
-def list_sources(db: Session = Depends(get_db), user: str = Depends(get_current_user)):
-    rows = db.query(IntelSource).order_by(IntelSource.category, IntelSource.name).all()
-    return [{c.name: getattr(r, c.name) for c in IntelSource.__table__.columns}
-            for r in rows]
-
-
-@router.post("/sources")
-def create_source(src: SourceIn, db: Session = Depends(get_db),
-                  user: str = Depends(get_current_user)):
-    row = IntelSource(**src.model_dump(), builtin=False,
-                      requires_config=src.kind in ("x", "telegram") and not src.url)
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return {"id": row.id}
-
-
-@router.patch("/sources/{source_id}")
-def patch_source(source_id: int, req: SourcePatch, db: Session = Depends(get_db),
-                 user: str = Depends(get_current_user)):
-    row = db.get(IntelSource, source_id)
-    if not row:
-        raise HTTPException(404, "Source not found")
-    for field, value in req.model_dump(exclude_none=True).items():
-        setattr(row, field, value)
-    if row.url:  # once a placeholder is given a URL it no longer needs config
-        row.requires_config = False
-    db.commit()
-    return {"ok": True}
-
-
-@router.delete("/sources/{source_id}")
-def delete_source(source_id: int, db: Session = Depends(get_db),
-                  user: str = Depends(get_current_user)):
-    row = db.get(IntelSource, source_id)
-    if not row:
-        raise HTTPException(404, "Source not found")
-    db.delete(row)
-    db.commit()
-    return {"ok": True}
+                       "relevance": r.relevance, "url": r.url} for r in stored]}
 
 
 @router.get("")

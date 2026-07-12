@@ -1,14 +1,4 @@
-"""SOC Workbench FastAPI application.
-
-Core modules (auth, dashboard, input processing, knowledge base, IoCs,
-projects, jobs, settings) live under ``app.api``. The roadmap integrations
-(Jira, Splunk, internet intel, reports, notifications, prompt library, plus
-global search and LLM history) live under ``app.routers`` and are wired in
-alongside them here.
-
-Runs from a single process: the API is served under /api/*, and if the
-frontend has been built (frontend/dist) it is served for everything else.
-"""
+"""SOC Workbench FastAPI application."""
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -19,31 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import (
-    auth,
-    dashboard,
-    documents,
-    iocs,
-    jobs,
-    knowledge,
-    projects,
-)
+from .api import auth, dashboard, documents, iocs, jobs, knowledge, projects
 from .api import settings as settings_api
-from .routers import (
-    intel,
-    jira,
-    llm,
-    notifications,
-    prompts,
-    reports,
-    search,
-    splunk,
-)
 from .config import get_settings
 from .database import SessionLocal, init_db
-from .jobs import scheduler
+from .jobs.scheduler import shutdown_scheduler, start_scheduler
 from .logging_config import get_logger, setup_logging
-from .services import intel_sources, settings_service
+from .routers import (
+    automation, intel, jira, llm, notifications, prompts, reports, search, splunk,
+)
+from .services import intelligence_automation, settings_service
 
 setup_logging()
 logger = get_logger(__name__)
@@ -57,18 +32,17 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         settings_service.seed_defaults(db)
-        intel_sources.seed_sources(db)
+        intelligence_automation.seed_default_sources(db)
     finally:
         db.close()
-    scheduler.start_scheduler()
+    start_scheduler()
     logger.info("%s started (env=%s)", app_settings.app_name, app_settings.environment)
     yield
-    scheduler.shutdown_scheduler()
+    shutdown_scheduler()
     logger.info("%s shutting down", app_settings.app_name)
 
 
-app = FastAPI(title=app_settings.app_name, version="0.1.0", lifespan=lifespan)
-
+app = FastAPI(title=app_settings.app_name, version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_settings.cors_origin_list,
@@ -78,33 +52,17 @@ app.add_middleware(
 )
 
 for module in (
-    auth,
-    settings_api,
-    dashboard,
-    documents,
-    knowledge,
-    iocs,
-    projects,
-    jobs,
-    # --- Roadmap integrations ---
-    jira,
-    splunk,
-    intel,
-    reports,
-    notifications,
-    prompts,
-    llm,
-    search,
+    auth, settings_api, dashboard, documents, knowledge, iocs, projects, jobs,
+    jira, splunk, intel, reports, notifications, prompts, llm, search, automation,
 ):
     app.include_router(module.router)
 
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "app": app_settings.app_name, "version": "0.1.0"}
+    return {"status": "ok", "app": app_settings.app_name, "version": "0.2.0"}
 
 
-# --- Serve the built frontend (frontend/dist) when present ----------------
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if (_FRONTEND_DIST / "index.html").is_file():
     _assets = _FRONTEND_DIST / "assets"
@@ -113,7 +71,6 @@ if (_FRONTEND_DIST / "index.html").is_file():
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
-        """Serve static files or fall back to index.html for client routes."""
         if full_path.startswith("api/"):
             raise HTTPException(404, "Not found")
         candidate = _FRONTEND_DIST / full_path

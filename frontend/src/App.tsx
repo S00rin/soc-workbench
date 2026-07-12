@@ -17,54 +17,42 @@ import Intel from "./pages/Intel";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Prompts from "./pages/Prompts";
+import Automation from "./pages/Automation";
 
 type AuthState = "checking" | "in" | "out";
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const loc = useLocation();
-
   useEffect(() => {
-    if (!getToken()) {
-      setAuth("out");
-      return;
-    }
-    api
-      .get("/api/auth/me")
-      .then(() => setAuth("in"))
-      .catch(() => {
-        clearToken();
-        setAuth("out");
-      });
+    if (!getToken()) { setAuth("out"); return; }
+    api.get("/api/auth/me").then(() => setAuth("in")).catch(() => {
+      clearToken(); setAuth("out");
+    });
   }, []);
-
   if (auth === "checking") return <Loading label="Starting SOC Workbench…" />;
-
   if (auth === "out") {
     if (loc.pathname === "/login") return <Login onLogin={() => setAuth("in")} />;
     return <Navigate to="/login" replace />;
   }
-
   if (loc.pathname === "/login") return <Navigate to="/" replace />;
-
-  return (
-    <Layout onLogout={() => { clearToken(); setAuth("out"); }}>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/process" element={<Process />} />
-        <Route path="/knowledge" element={<Knowledge />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/iocs" element={<IoCs />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/jira" element={<Jira />} />
-        <Route path="/splunk" element={<Splunk />} />
-        <Route path="/intel" element={<Intel />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/prompts" element={<Prompts />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
-  );
+  return <Layout onLogout={() => { clearToken(); setAuth("out"); }}>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/process" element={<Process />} />
+      <Route path="/knowledge" element={<Knowledge />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/iocs" element={<IoCs />} />
+      <Route path="/jobs" element={<Jobs />} />
+      <Route path="/jira" element={<Jira />} />
+      <Route path="/splunk" element={<Splunk />} />
+      <Route path="/intel" element={<Intel />} />
+      <Route path="/automation" element={<Automation />} />
+      <Route path="/reports" element={<Reports />} />
+      <Route path="/notifications" element={<Notifications />} />
+      <Route path="/prompts" element={<Prompts />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </Layout>;
 }
