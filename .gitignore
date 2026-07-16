@@ -16,7 +16,7 @@ frontend/dist/
 *.log
 
 # Application data (SQLite DB, uploads, reports, backups, logs, cache)
-data/
+/data/
 !data/.gitkeep
 
 # OS / editor

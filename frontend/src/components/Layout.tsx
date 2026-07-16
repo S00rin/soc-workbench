@@ -19,6 +19,7 @@ const NAV = [
     { to: "/notifications", icon: "✉", label: "Notifications" },
     { to: "/prompts", icon: "❯", label: "Prompt Library" },
   ]},
+  { group: "Sorin", items: [{ to: "/about-sorin", icon: "S", label: "معرفی سورین" }]},
   { group: "System", items: [{ to: "/settings", icon: "⚙", label: "Settings" }]},
 ];
 const TITLES: Record<string,string> = {
@@ -27,6 +28,7 @@ const TITLES: Record<string,string> = {
   "/jira":"Jira", "/splunk":"Splunk & MCP", "/intel":"Internet Intelligence",
   "/automation":"Intelligence & Claude Automation", "/reports":"Reports",
   "/notifications":"Notifications", "/prompts":"Prompt Library", "/settings":"Settings",
+  "/about-sorin":"معرفی سورین",
 };
 export default function Layout({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
   const [open,setOpen]=useState(false); const loc=useLocation();
