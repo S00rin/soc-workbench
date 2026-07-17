@@ -18,6 +18,7 @@ import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Prompts from "./pages/Prompts";
 import Automation from "./pages/Automation";
+import AboutSorin from "./pages/AboutSorin";
 
 type AuthState = "checking" | "in" | "out";
 
@@ -52,6 +53,7 @@ export default function App() {
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/prompts" element={<Prompts />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/about-sorin" element={<AboutSorin />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </Layout>;
