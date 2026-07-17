@@ -1,167 +1,103 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { hierarchy, linkRadial, tree } from "d3";
-import type { HierarchyPointLink, HierarchyPointNode } from "d3";
-import type { SorinCategory, SorinOffering } from "../data/sorin";
-
-type GraphDatum = {
-  id: string;
-  title: string;
-  shortTitle: string;
-  kind: "root" | "category" | "service" | "product";
-  accent: string;
-  offering?: SorinOffering;
-  children?: GraphDatum[];
-};
+import { useMemo } from "react";
+import { arc, pie } from "d3";
+import type { PieArcDatum } from "d3";
+import type { SorinCategory } from "../data/sorin";
 
 type Props = {
   categories: SorinCategory[];
-  selectedId: string;
-  onSelect: (offering: SorinOffering) => void;
+  selectedCategoryId: string;
+  onSelectCategory: (category: SorinCategory) => void;
 };
 
-const MIN_WIDTH = 620;
-const HEIGHT = 620;
+const SIZE = 520;
+const CENTER = SIZE / 2;
+const INNER_RADIUS = 126;
+const OUTER_RADIUS = 194;
 
-export default function SorinGraph({ categories, selectedId, onSelect }: Props) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(900);
+export default function SorinGraph({ categories, selectedCategoryId, onSelectCategory }: Props) {
+  const slices = useMemo(
+    () =>
+      pie<SorinCategory>()
+        .value(() => 1)
+        .sort(null)
+        .padAngle(0.025)
+        .startAngle(-Math.PI / 2)
+        .endAngle(Math.PI * 1.5)(categories),
+    [categories],
+  );
 
-  useEffect(() => {
-    const element = wrapperRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      setWidth(Math.max(MIN_WIDTH, Math.floor(entry.contentRect.width)));
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const selected = categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
 
-  const { nodes, links, radius } = useMemo(() => {
-    const data: GraphDatum = {
-      id: "sorin",
-      title: "سورین",
-      shortTitle: "سورین",
-      kind: "root",
-      accent: "#e7f7ff",
-      children: categories.map((category) => ({
-        id: category.id,
-        title: category.title,
-        shortTitle: category.shortTitle,
-        kind: "category",
-        accent: category.accent,
-        children: category.offerings.map((offering) => ({
-          id: offering.id,
-          title: offering.title,
-          shortTitle: offering.shortTitle,
-          kind: offering.kind,
-          accent: offering.accent,
-          offering,
-        })),
-      })),
-    };
-    const root = hierarchy(data);
-    const graphRadius = Math.min(width, HEIGHT) * 0.42;
-    tree<GraphDatum>().size([Math.PI * 2, graphRadius])(root);
-    return { nodes: root.descendants(), links: root.links(), radius: graphRadius };
-  }, [categories, width]);
+  const segmentPath = (datum: PieArcDatum<SorinCategory>, active: boolean) =>
+    arc<PieArcDatum<SorinCategory>>()
+      .innerRadius(INNER_RADIUS)
+      .outerRadius(active ? OUTER_RADIUS + 10 : OUTER_RADIUS)
+      .cornerRadius(12)(datum) ?? undefined;
 
-  const radialLink = linkRadial<HierarchyPointLink<GraphDatum>, HierarchyPointNode<GraphDatum>>()
-    .angle((d) => d.x)
-    .radius((d) => d.y);
-
-  const point = (node: HierarchyPointNode<GraphDatum>) => {
-    const angle = node.x - Math.PI / 2;
-    return { x: Math.cos(angle) * node.y, y: Math.sin(angle) * node.y };
-  };
+  const labelArc = arc<PieArcDatum<SorinCategory>>()
+    .innerRadius((INNER_RADIUS + OUTER_RADIUS) / 2)
+    .outerRadius((INNER_RADIUS + OUTER_RADIUS) / 2);
 
   return (
-    <div className="sorin-graph-scroll" ref={wrapperRef}>
+    <div className="sorin-graph-shell">
       <svg
         className="sorin-graph"
-        viewBox={`${-width / 2} ${-HEIGHT / 2} ${width} ${HEIGHT}`}
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
         aria-labelledby="sorin-graph-title sorin-graph-desc"
       >
-        <title id="sorin-graph-title">نقشه تعاملی خدمات و محصولات سورین</title>
-        <desc id="sorin-graph-desc">برای مشاهده توضیحات هر خدمت یا محصول، گره مربوط به آن را انتخاب کنید.</desc>
+        <title id="sorin-graph-title">نقشه تعاملی سبد خدمات و محصولات سورین</title>
+        <desc id="sorin-graph-desc">
+          پنج خانواده اصلی سبد سورین. هر بخش را انتخاب کنید تا خدمات و محصولات همان خانواده نمایش داده شوند.
+        </desc>
+
         <defs>
-          <radialGradient id="sorin-core-glow">
-            <stop offset="0%" stopColor="#75d9ff" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#6872ff" stopOpacity="0.45" />
-          </radialGradient>
-          <filter id="sorin-glow" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur stdDeviation="7" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <filter id="sorin-ring-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="12" stdDeviation="13" floodColor="#02070d" floodOpacity="0.34" />
           </filter>
+          <radialGradient id="sorin-ring-core" cx="35%" cy="28%">
+            <stop offset="0%" stopColor="#213f4b" />
+            <stop offset="100%" stopColor="#101b25" />
+          </radialGradient>
         </defs>
 
-        <circle r={radius + 28} className="sorin-orbit sorin-orbit-outer" />
-        <circle r={radius * 0.55} className="sorin-orbit" />
+        <g transform={`translate(${CENTER}, ${CENTER})`} filter="url(#sorin-ring-shadow)">
+          <circle r={OUTER_RADIUS + 29} className="portfolio-orbit" />
+          {slices.map((slice) => {
+            const category = slice.data;
+            const active = category.id === selectedCategoryId;
+            const [labelX, labelY] = labelArc.centroid(slice);
 
-        <g className="sorin-links">
-          {links.map((link) => {
-            const target = link.target.data;
-            return (
-              <path
-                key={`${link.source.data.id}-${target.id}`}
-                d={radialLink(link) || undefined}
-                className={target.id === selectedId ? "active" : ""}
-                style={{ "--node-accent": target.accent } as React.CSSProperties}
-              />
-            );
-          })}
-        </g>
-
-        <g className="sorin-nodes">
-          {nodes.map((node) => {
-            const { x, y } = point(node);
-            const datum = node.data;
-            const interactive = Boolean(datum.offering);
-            const selected = datum.id === selectedId;
-            const size = datum.kind === "root" ? 56 : datum.kind === "category" ? 36 : 27;
             return (
               <g
-                key={datum.id}
-                transform={`translate(${x},${y})`}
-                className={`sorin-node ${datum.kind} ${selected ? "selected" : ""} ${interactive ? "interactive" : ""}`}
-                style={{ "--node-accent": datum.accent } as React.CSSProperties}
-                role={interactive ? "button" : undefined}
-                tabIndex={interactive ? 0 : undefined}
-                aria-label={interactive ? `مشاهده جزئیات ${datum.title}` : undefined}
-                aria-pressed={interactive ? selected : undefined}
-                onClick={() => datum.offering && onSelect(datum.offering)}
+                key={category.id}
+                className={`portfolio-segment ${active ? "active" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`${category.index}، ${category.title}، شامل ${category.offerings.length} مورد`}
+                aria-pressed={active}
+                onClick={() => onSelectCategory(category)}
                 onKeyDown={(event) => {
-                  if (datum.offering && (event.key === "Enter" || event.key === " ")) {
+                  if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    onSelect(datum.offering);
+                    onSelectCategory(category);
                   }
                 }}
               >
-                {selected && <circle r={size + 10} className="selection-ring" />}
-                <circle r={size} className="node-disc" filter={datum.kind === "root" ? "url(#sorin-glow)" : undefined} />
-                {datum.kind === "root" ? (
-                  <>
-                    <text className="root-mark" textAnchor="middle" dy="-1">S</text>
-                    <text className="root-label" textAnchor="middle" dy="78">سورین</text>
-                  </>
-                ) : (
-                  <>
-                    <text className="node-symbol" textAnchor="middle" dy="5">
-                      {datum.kind === "category" ? "◆" : datum.kind === "product" ? "P" : "S"}
-                    </text>
-                    <text
-                      className="node-label"
-                      textAnchor={x > 20 ? "start" : x < -20 ? "end" : "middle"}
-                      x={x > 20 ? size + 9 : x < -20 ? -size - 9 : 0}
-                      y={Math.abs(x) <= 20 ? size + 18 : 5}
-                    >
-                      {datum.shortTitle}
-                    </text>
-                  </>
-                )}
+                <path d={segmentPath(slice, active)} style={{ "--segment-accent": category.accent } as React.CSSProperties} />
+                <text x={labelX} y={labelY} dy="0.36em" textAnchor="middle">
+                  {category.index}
+                </text>
               </g>
             );
           })}
+
+          <circle r={INNER_RADIUS - 13} className="portfolio-core" />
+          <text className="portfolio-core-mark" textAnchor="middle" y="-25">S</text>
+          <text className="portfolio-core-title" textAnchor="middle" y="18">{selected.shortTitle}</text>
+          <text className="portfolio-core-count" textAnchor="middle" y="49">
+            {selected.offerings.length} خدمت و محصول
+          </text>
         </g>
       </svg>
     </div>
