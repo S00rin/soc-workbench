@@ -176,7 +176,8 @@ def protect(
                     pass
 
     out = text
-    for det in detections:
+    replacements: dict[str, str] = {}
+    for index, det in enumerate(detections):
         counts[det.label] = counts.get(det.label, 0) + 1
         if mode == "remove":
             replacement = ""
@@ -198,7 +199,15 @@ def protect(
                     )
         else:  # mask
             replacement = _mask_value(det)
-        out = out.replace(det.value, replacement)
+        # Protect replacements behind a private-use placeholder. Without this,
+        # a nested detector (for example DOMAIN inside EMAIL) can mask the
+        # already-masked output a second time.
+        placeholder = f"\ue000SOCWB_{index:04d}\ue001"
+        out = out.replace(det.value, placeholder)
+        replacements[placeholder] = replacement
+
+    for placeholder, replacement in replacements.items():
+        out = out.replace(placeholder, replacement)
 
     if mode == "tokenize" and db is not None and persist_scope is not None:
         db.commit()

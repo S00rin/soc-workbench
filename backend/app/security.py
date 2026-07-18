@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -59,11 +60,23 @@ def verify_credentials(username: str, password: str) -> bool:
     )
 
 
+@dataclass(frozen=True)
+class AuthContext:
+    username: str
+    tenant_id: str
+    role: str
+
+
 def create_access_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": subject, "exp": expire}
+    payload = {
+        "sub": subject,
+        "tenant": settings.default_tenant_id,
+        "role": settings.admin_role,
+        "exp": expire,
+    }
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
@@ -81,3 +94,29 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
         return subject
     except JWTError:
         raise credentials_exception
+
+
+def get_auth_context(token: str = Depends(oauth2_scheme)) -> AuthContext:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        subject = payload.get("sub")
+        if not subject:
+            raise credentials_exception
+        return AuthContext(
+            username=subject,
+            tenant_id=payload.get("tenant") or settings.default_tenant_id,
+            role=payload.get("role") or settings.admin_role,
+        )
+    except JWTError:
+        raise credentials_exception
+
+
+def require_admin(context: AuthContext = Depends(get_auth_context)) -> AuthContext:
+    if context.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator role required")
+    return context

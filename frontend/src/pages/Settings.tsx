@@ -5,9 +5,9 @@ import { Loading, Modal, useToast } from "../lib";
 type Setting = { key: string; value: string; is_secret: boolean; category: string; has_value: boolean };
 type Pattern = { id: number; label: string; pattern: string; is_regex: boolean; enabled: boolean; token_prefix: string };
 
-const CATEGORY_ORDER = ["llm", "processing", "general", "jira", "splunk", "smtp", "telegram"];
+const CATEGORY_ORDER = ["llm", "processing", "general", "atlassian", "jira", "splunk", "smtp", "telegram"];
 const CATEGORY_LABELS: Record<string, string> = {
-  llm: "LLM", processing: "Processing", general: "General", jira: "Jira",
+  llm: "LLM", processing: "Processing", general: "General", atlassian: "Atlassian policy", jira: "Jira (legacy)",
   splunk: "Splunk", smtp: "Email (SMTP)", telegram: "Telegram",
 };
 
@@ -24,6 +24,10 @@ const KEY_HINTS: Record<string, string> = {
   llm_provider: "claude_cli routes analysis through your local Claude Code agent — no API key needed.",
   claude_cli_path: "Leave blank to find `claude` on PATH. Only set if it isn't found.",
   llm_model: "For claude_cli use an alias (opus / sonnet / haiku) or a full model id.",
+  atlassian_history_retention_days: "History older than this many days is removed by the daily retention job.",
+  atlassian_bulk_max_issues: "Hard maximum target count for one Jira or Confluence bulk job.",
+  atlassian_auto_post_enabled: "Global safety flag; the connection must also explicitly allow auto-post.",
+  atlassian_bulk_auto_post_enabled: "Global safety flag for bulk auto-post; admin approval controls still apply.",
 };
 
 export default function Settings() {

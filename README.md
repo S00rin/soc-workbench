@@ -18,7 +18,11 @@ an SQLite backing store.
 - **Projects** — group documents, indicators, and findings per investigation.
 - **Internet intelligence** — pull and normalize RSS/Atom threat feeds.
 - **Reports** — assemble and export Markdown/HTML reports.
-- **Integrations** — Jira (ticketing) and Splunk (search) connectors.
+- **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
+  dynamic Jira field mapping, permission tests, redacted query history, smart
+  comment approval, and controlled bulk jobs.
+- **Integrations** — legacy Jira and Splunk connectors remain available for
+  backward compatibility.
 - **LLM assistance** — Anthropic (Claude) and optional OpenAI-compatible
   endpoints, with a reusable prompt library and request history.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
@@ -108,6 +112,13 @@ runtime in the **Settings** UI and are stored in the database. Key variables:
 | `CORS_ORIGINS`           | Allowed frontend origins (comma-separated)          |
 | `ANTHROPIC_API_KEY`      | Claude API key (optional; also settable in UI)      |
 | `OPENAI_BASE_URL/KEY`    | Optional OpenAI-compatible endpoint                 |
+| `ATLASSIAN_OAUTH_*`      | Optional Jira/Confluence Cloud OAuth 2.0 (3LO) app  |
+| `ATLASSIAN_BULK_MAX_ISSUES` | Hard ceiling for one bulk comment job            |
+| `ATLASSIAN_HISTORY_RETENTION_DAYS` | Default history retention policy        |
+
+See [Atlassian integration setup](docs/ATLASSIAN_INTEGRATION.md) for Jira
+Cloud/Data Center, Confluence, OAuth scopes, migration, deployment, and
+rollback instructions.
 
 ## Data & storage
 
@@ -129,6 +140,11 @@ data/
 ```bash
 cd backend
 pytest
+
+cd ../frontend
+npm run typecheck
+npm test -- --run
+npm run build
 ```
 
 ## Project layout

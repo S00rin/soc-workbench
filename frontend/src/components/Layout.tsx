@@ -11,6 +11,7 @@ const NAV = [
     { to: "/jobs", icon: "⚙", label: "Jobs" },
   ]},
   { group: "Integrations", items: [
+    { to: "/atlassian", icon: "A", label: "Atlassian" },
     { to: "/jira", icon: "◔", label: "Jira" },
     { to: "/splunk", icon: "◱", label: "Splunk & MCP" },
     { to: "/intel", icon: "◎", label: "Internet Intel" },
@@ -26,6 +27,7 @@ const TITLES: Record<string,string> = {
   "/":"Dashboard", "/process":"Input & Data Processing", "/knowledge":"SOC Knowledge Base",
   "/iocs":"IoC Repository", "/projects":"Projects", "/jobs":"Background Jobs",
   "/jira":"Jira", "/splunk":"Splunk & MCP", "/intel":"Internet Intelligence",
+  "/atlassian":"Atlassian Integrations",
   "/automation":"Intelligence & Claude Automation", "/reports":"Reports",
   "/notifications":"Notifications", "/prompts":"Prompt Library", "/settings":"Settings",
   "/about-sorin":"معرفی سورین",

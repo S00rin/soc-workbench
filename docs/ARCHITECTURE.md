@@ -62,6 +62,31 @@ database; there are no external service dependencies required to run it.
 - `backup` — database backup/restore.
 - `settings_service` — runtime settings persisted in the DB.
 
+### Shared Atlassian integration domain
+
+The production Atlassian workspace is implemented separately from the legacy
+global Jira settings connector so existing data remains compatible:
+
+```
+React Atlassian workspace
+        │
+        ▼
+app/routers/atlassian.py
+        │
+        ├── AtlassianTransport ── encrypted credential/OAuth token manager
+        ├── JiraProvider ──────── Cloud v3 / Data Center v2
+        ├── ConfluenceProvider ─ Cloud v2+v1 search / Data Center REST
+        ├── field_mapping ────── scoped transforms and metadata validation
+        ├── integration_history  redaction + tenant-aware audit
+        └── bulk_operations ──── persisted jobs/items + idempotency
+```
+
+Provider-specific API shapes stay behind provider classes. Authentication,
+error classification, retry policy, credential encryption, history and audit
+are shared. Bulk job state is persisted in SQLite; execution uses the existing
+bounded in-process worker pool, so a future external queue can replace the
+runner without changing the API or database contract.
+
 ### `app/jobs/`
 `scheduler` wires APScheduler for recurring background work (feed refresh,
 backups). Started as part of the application lifespan.
@@ -74,6 +99,11 @@ shared `base`). The database URL defaults to
 
 Generated artifacts (uploads, reports, exports, backups, cache, logs) are
 written under `DATA_DIR` and are excluded from version control.
+
+Versioned schema upgrades live in `app/migrations/`. Startup applies pending
+migrations before registering legacy tables. `0001_atlassian_domain` adds
+connections, mappings, history, audit, bulk job/items, idempotency and Jira ↔
+Confluence content links without deleting or rewriting legacy Jira settings.
 
 ## Configuration precedence
 

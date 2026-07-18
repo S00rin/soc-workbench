@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from ..schemas import Token, UserOut
-from ..security import create_access_token, get_current_user, verify_credentials
+from ..security import AuthContext, create_access_token, get_auth_context, verify_credentials
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -21,5 +21,5 @@ def login(form: OAuth2PasswordRequestForm = Depends()) -> Token:
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: str = Depends(get_current_user)) -> UserOut:
-    return UserOut(username=user)
+def me(context: AuthContext = Depends(get_auth_context)) -> UserOut:
+    return UserOut(username=context.username, tenant_id=context.tenant_id, role=context.role)

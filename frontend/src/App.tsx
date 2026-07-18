@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Prompts from "./pages/Prompts";
 import Automation from "./pages/Automation";
 import AboutSorin from "./pages/AboutSorin";
+import Atlassian from "./pages/Atlassian";
 
 type AuthState = "checking" | "in" | "out";
 
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/iocs" element={<IoCs />} />
       <Route path="/jobs" element={<Jobs />} />
       <Route path="/jira" element={<Jira />} />
+      <Route path="/atlassian" element={<Atlassian />} />
       <Route path="/splunk" element={<Splunk />} />
       <Route path="/intel" element={<Intel />} />
       <Route path="/automation" element={<Automation />} />

@@ -21,6 +21,8 @@ class Token(BaseModel):
 
 class UserOut(BaseModel):
     username: str
+    tenant_id: str = "default"
+    role: str = "admin"
 
 
 # --- Settings -------------------------------------------------------------
