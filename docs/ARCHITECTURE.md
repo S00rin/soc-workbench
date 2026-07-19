@@ -32,11 +32,14 @@ database; there are no external service dependencies required to run it.
 ## Request lifecycle
 
 1. On startup (`lifespan` in `app/main.py`) the app ensures data directories
-   exist, initializes the database schema, and seeds default settings.
+   exist, initializes the database schema, seeds default settings, the initial
+   administrator and time-bounded feature policies.
 2. CORS middleware is applied using `CORS_ORIGINS`.
-3. Routers are registered under `/api/*`. Core modules load from `app.api`;
+3. Access middleware resolves the active database user, enforces module RBAC
+   and feature start/expiry, and records mutating actions without request bodies.
+4. Routers are registered under `/api/*`. Core modules load from `app.api`;
    integrations load from `app.routers`.
-4. If `frontend/dist/index.html` exists, a catch-all route serves the SPA and
+5. If `frontend/dist/index.html` exists, a catch-all route serves the SPA and
    its assets for any path that is not `/api/*`.
 
 ## Backend modules
@@ -87,6 +90,18 @@ are shared. Bulk job state is persisted in SQLite; execution uses the existing
 bounded in-process worker pool, so a future external queue can replace the
 runner without changing the API or database contract.
 
+### Product governance and shared connector chat
+
+`app/models/governance.py` stores users, module entitlements, feature policies,
+Wiki.js connections, connector chat sessions/turns and activity history.
+`ProductAccessMiddleware` is the enforcement point for every protected API.
+
+`integration_chat.py` exposes one read-only conversational workflow over
+`JiraProvider`, `ConfluenceProvider`, `WikiJSProvider` and `SplunkClient`.
+Generated JQL/CQL/SPL is validated and bounded before execution. Provider data
+is untrusted context, redacted before persistence, and isolated by tenant and
+chat owner.
+
 ### `app/jobs/`
 `scheduler` wires APScheduler for recurring background work (feed refresh,
 backups). Started as part of the application lifespan.
@@ -104,6 +119,8 @@ Versioned schema upgrades live in `app/migrations/`. Startup applies pending
 migrations before registering legacy tables. `0001_atlassian_domain` adds
 connections, mappings, history, audit, bulk job/items, idempotency and Jira ↔
 Confluence content links without deleting or rewriting legacy Jira settings.
+`0002_product_governance` adds local users, feature scheduling, Wiki.js,
+connector chat and activity history without rewriting the `0001` domain.
 
 ## Configuration precedence
 
@@ -115,8 +132,9 @@ Confluence content links without deleting or rewriting legacy Jira settings.
 
 ## Frontend
 
-A Vite + React + TypeScript SPA. Each feature area maps to a page under
-`src/pages/` (Dashboard, Process, Knowledge, IoCs, Projects, Jobs, Intel, Jira,
-Splunk, Reports, Notifications, Prompts, Settings, Login). API access is
-centralized in `src/api.ts`. In development, Vite proxies `/api` to the backend
-on port 8000 so the SPA and API share an origin.
+A Vite + React + TypeScript SPA. Compact hubs group Data/IoCs, integrations,
+intelligence and operations. `AccessAdmin` manages users and feature windows;
+`IntegrationChat` provides the shared prompt/history UI. API access is
+centralized in `src/api.ts`, while `access.tsx` holds effective display access.
+The backend remains authoritative. In development, Vite proxies `/api` to the
+backend on port 8000 so the SPA and API share an origin.

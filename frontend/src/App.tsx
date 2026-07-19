@@ -1,62 +1,86 @@
-import { useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { AccessProvider, AccessState, hasModule, useAccess } from "./access";
 import { api, clearToken, getToken } from "./api";
 import { Loading } from "./lib";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Process from "./pages/Process";
-import Knowledge from "./pages/Knowledge";
-import Projects from "./pages/Projects";
-import IoCs from "./pages/IoCs";
-import Jobs from "./pages/Jobs";
+import DataHub from "./pages/DataHub";
+import IntegrationHub from "./pages/IntegrationHub";
+import IntelligenceHub from "./pages/IntelligenceHub";
+import OperationsHub from "./pages/OperationsHub";
 import Settings from "./pages/Settings";
-import Jira from "./pages/Jira";
-import Splunk from "./pages/Splunk";
-import Intel from "./pages/Intel";
 import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
 import Prompts from "./pages/Prompts";
-import Automation from "./pages/Automation";
+import AccessAdmin from "./pages/AccessAdmin";
 import AboutSorin from "./pages/AboutSorin";
-import Atlassian from "./pages/Atlassian";
+import PasswordChange from "./pages/PasswordChange";
 
 type AuthState = "checking" | "in" | "out";
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState>("checking");
+  const [access, setAccess] = useState<AccessState | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const loc = useLocation();
-  useEffect(() => {
-    if (!getToken()) { setAuth("out"); return; }
-    api.get("/api/auth/me").then(() => setAuth("in")).catch(() => {
-      clearToken(); setAuth("out");
-    });
+
+  const loadAuth = useCallback(async () => {
+    if (!getToken()) { setAccess(null); setAuth("out"); return; }
+    setAuth("checking");
+    try {
+      const me = await api.get("/api/auth/me");
+      setMustChangePassword(Boolean(me.must_change_password));
+      setAccess(await api.get("/api/access/effective"));
+      setAuth("in");
+    } catch {
+      clearToken(); setAccess(null); setMustChangePassword(false); setAuth("out");
+    }
   }, []);
-  if (auth === "checking") return <Loading label="Starting SOC Workbench…" />;
+
+  useEffect(() => { loadAuth(); }, [loadAuth]);
+  if (auth === "checking") return <Loading label="Starting Soorin SOC Workbench…" />;
   if (auth === "out") {
-    if (loc.pathname === "/login") return <Login onLogin={() => setAuth("in")} />;
+    if (loc.pathname === "/login") return <Login onLogin={loadAuth} />;
     return <Navigate to="/login" replace />;
   }
+  if (!access) return <Loading />;
   if (loc.pathname === "/login") return <Navigate to="/" replace />;
-  return <Layout onLogout={() => { clearToken(); setAuth("out"); }}>
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/process" element={<Process />} />
-      <Route path="/knowledge" element={<Knowledge />} />
-      <Route path="/projects" element={<Projects />} />
-      <Route path="/iocs" element={<IoCs />} />
-      <Route path="/jobs" element={<Jobs />} />
-      <Route path="/jira" element={<Jira />} />
-      <Route path="/atlassian" element={<Atlassian />} />
-      <Route path="/splunk" element={<Splunk />} />
-      <Route path="/intel" element={<Intel />} />
-      <Route path="/automation" element={<Automation />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/prompts" element={<Prompts />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/about-sorin" element={<AboutSorin />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  </Layout>;
+  if (mustChangePassword) return <AccessProvider value={access}><PasswordChange onChanged={loadAuth} onLogout={() => { clearToken(); setAccess(null); setMustChangePassword(false); setAuth("out"); }} /></AccessProvider>;
+
+  return <AccessProvider value={access}>
+    <Layout onLogout={() => { clearToken(); setAccess(null); setMustChangePassword(false); setAuth("out"); }}>
+      <Routes>
+        <Route path="/" element={<Allowed module="dashboard"><Dashboard /></Allowed>} />
+        <Route path="/data" element={<Allowed module="data"><DataHub /></Allowed>} />
+        <Route path="/integrations" element={<Allowed module="integrations"><IntegrationHub /></Allowed>} />
+        <Route path="/intelligence" element={<Allowed module="intelligence"><IntelligenceHub /></Allowed>} />
+        <Route path="/reports" element={<Allowed module="reports"><Reports /></Allowed>} />
+        <Route path="/operations" element={<Allowed module="operations"><OperationsHub /></Allowed>} />
+        <Route path="/prompts" element={<Allowed module="prompts"><Prompts /></Allowed>} />
+        <Route path="/settings" element={<Allowed module="settings"><Settings /></Allowed>} />
+        <Route path="/admin/access" element={access.user.role === "admin" ? <AccessAdmin /> : <Navigate to="/" replace />} />
+        <Route path="/about-sorin" element={<AboutSorin />} />
+
+        {/* Backward-compatible URLs now land in the compact hubs. */}
+        <Route path="/process" element={<Navigate to="/data?tab=process" replace />} />
+        <Route path="/knowledge" element={<Navigate to="/data?tab=knowledge" replace />} />
+        <Route path="/iocs" element={<Navigate to="/data?tab=iocs" replace />} />
+        <Route path="/projects" element={<Navigate to="/data?tab=projects" replace />} />
+        <Route path="/jira" element={<Navigate to="/integrations?tab=chat" replace />} />
+        <Route path="/atlassian" element={<Navigate to="/integrations?tab=atlassian" replace />} />
+        <Route path="/splunk" element={<Navigate to="/integrations?tab=splunk" replace />} />
+        <Route path="/intel" element={<Navigate to="/intelligence?tab=intel" replace />} />
+        <Route path="/automation" element={<Navigate to="/intelligence?tab=automation" replace />} />
+        <Route path="/jobs" element={<Navigate to="/operations?tab=jobs" replace />} />
+        <Route path="/notifications" element={<Navigate to="/operations?tab=notifications" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  </AccessProvider>;
+}
+
+function Allowed({ module, children }: { module: string; children: ReactNode }) {
+  const access = useAccess();
+  return hasModule(access, module) ? <>{children}</> : <Navigate to="/" replace />;
 }

@@ -7,14 +7,12 @@ Usage:
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
-
 from sqlalchemy import Engine, text
 
 from ..database import engine
-from . import v0001_atlassian_domain
+from . import v0001_atlassian_domain, v0002_product_governance
 
-MIGRATIONS = [v0001_atlassian_domain]
+MIGRATIONS = [v0001_atlassian_domain, v0002_product_governance]
 
 
 def _ensure_version_table(db_engine: Engine) -> None:
@@ -68,4 +66,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

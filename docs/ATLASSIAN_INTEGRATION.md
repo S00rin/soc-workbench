@@ -1,6 +1,6 @@
 # Atlassian integration setup
 
-The **Atlassian Integrations** page manages Jira and Confluence through one
+The **Integration Hub → Jira & Confluence** page manages Jira and Confluence through one
 shared, encrypted connection model. A connection may enable Jira, Confluence,
 or both products when the same Atlassian site and credential has the required
 access.
@@ -154,8 +154,8 @@ therefore destructive. Legacy Jira settings are not removed.
 
 ## Current operational limits
 
-- The application-wide login remains single-user even though the new schema and
-  queries are tenant/user scoped.
+- Application login is database-backed and supports per-module roles. Atlassian
+  connections and history remain tenant-scoped; chat history is also owner-scoped.
 - Bulk execution uses the existing in-process worker pool rather than Redis or
   another external queue.
 - Confluence page creation/update and inline comments are not enabled; the

@@ -7,6 +7,10 @@ from .atlassian import (
 from .content import Document, IntelItem, KnowledgeItem
 from .core import Job, SensitivePattern, Setting, TokenMapping
 from .entities import Analysis, IoC, Notification, Project, Prompt, Report
+from .governance import (
+    ExternalConnection, FeaturePolicy, IntegrationChatSession,
+    IntegrationChatTurn, UserAccount, UserActivity,
+)
 
 __all__ = [
     "Setting", "Job", "SensitivePattern", "TokenMapping", "Document",
@@ -16,4 +20,6 @@ __all__ = [
     "AtlassianConnection", "AtlassianContentLink", "AtlassianFieldMapping",
     "AuditLog", "BulkOperation", "BulkOperationItem", "IdempotencyRecord",
     "IntegrationHistory",
+    "UserAccount", "FeaturePolicy", "ExternalConnection",
+    "IntegrationChatSession", "IntegrationChatTurn", "UserActivity",
 ]

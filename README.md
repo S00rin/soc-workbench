@@ -5,9 +5,9 @@ and feeds, extracts and tokenizes indicators, organizes investigations into
 projects, and runs LLM-assisted analysis — all from a single local process with
 an SQLite backing store.
 
-> ⚠️ **Single-user, self-hosted tool.** It ships with insecure defaults for
-> local development. Read [SECURITY.md](SECURITY.md) before exposing it on any
-> network.
+> ⚠️ **Self-hosted security tool.** It ships with development defaults. Change
+> `ADMIN_PASSWORD` and `SECRET_KEY`, configure TLS, and read
+> [SECURITY.md](SECURITY.md) before exposing it on any network.
 
 ## Features
 
@@ -21,8 +21,13 @@ an SQLite backing store.
 - **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
   dynamic Jira field mapping, permission tests, redacted query history, smart
   comment approval, and controlled bulk jobs.
-- **Integrations** — legacy Jira and Splunk connectors remain available for
-  backward compatibility.
+- **Unified integration chat** — ask Jira, Confluence, Wiki.js and Splunk in
+  natural language, edit the generated read-only query, continue with follow-up
+  prompts, and reopen the redacted conversation history.
+- **Wiki.js** — encrypted API-token connections, GraphQL permission tests, page
+  search and prompt-based analysis.
+- **Product governance** — multiple local users, module RBAC, activity history,
+  and admin-controlled feature start/expiry windows.
 - **LLM assistance** — Anthropic (Claude) and optional OpenAI-compatible
   endpoints, with a reusable prompt library and request history.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
@@ -36,7 +41,7 @@ an SQLite backing store.
 | Database  | SQLite (file-based, under `data/`)                      |
 | Frontend  | React 18, TypeScript, Vite, React Router               |
 | LLM       | `anthropic` SDK; optional OpenAI-compatible endpoint    |
-| Auth      | JWT (single local user); secrets encrypted at rest      |
+| Auth      | JWT with database users, module RBAC and encrypted secrets |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper walkthrough.
 
@@ -76,7 +81,9 @@ npm install
 npm run dev        # dev server at http://localhost:5173 (proxies /api -> :8000)
 ```
 
-Log in with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` from your `.env`.
+On the first upgraded start, the initial admin account is seeded from
+`ADMIN_USERNAME` / `ADMIN_PASSWORD`. Create additional users and module access
+rules under **Access & Features**.
 
 ### Single-process (production-style)
 
@@ -106,7 +113,7 @@ runtime in the **Settings** UI and are stored in the database. Key variables:
 
 | Variable                 | Purpose                                             |
 |--------------------------|-----------------------------------------------------|
-| `ADMIN_USERNAME/PASSWORD`| Single-user login credentials                       |
+| `ADMIN_USERNAME/PASSWORD`| Initial administrator credentials (first seed)      |
 | `SECRET_KEY`             | Signs JWTs **and** encrypts stored secrets — set it |
 | `DATA_DIR`               | Where SQLite DB, uploads, reports, backups live     |
 | `CORS_ORIGINS`           | Allowed frontend origins (comma-separated)          |
@@ -119,6 +126,9 @@ runtime in the **Settings** UI and are stored in the database. Key variables:
 See [Atlassian integration setup](docs/ATLASSIAN_INTEGRATION.md) for Jira
 Cloud/Data Center, Confluence, OAuth scopes, migration, deployment, and
 rollback instructions.
+
+See [Product governance, prompt chat and Wiki.js](docs/PRODUCT_GOVERNANCE_AND_WIKIJS.md)
+for user roles, feature expiry, Wiki.js API setup, deployment and rollback.
 
 ## Data & storage
 
@@ -143,7 +153,7 @@ pytest
 
 cd ../frontend
 npm run typecheck
-npm test -- --run
+npm test
 npm run build
 ```
 
