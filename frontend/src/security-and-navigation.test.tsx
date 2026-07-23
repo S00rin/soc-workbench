@@ -28,6 +28,8 @@ describe("safe product shell", () => {
     expect(screen.getByText("Data & IoCs")).toBeInTheDocument();
     expect(screen.queryByText("Integration Hub")).not.toBeInTheDocument();
     expect(screen.queryByText("Access & Features")).not.toBeInTheDocument();
+    expect(screen.queryByText("Price Analyzer")).not.toBeInTheDocument(); // not in this viewer's granted modules
+    expect(screen.getByText("Help Guides")).toBeInTheDocument(); // help has no module gate; always visible
     expect(screen.getByAltText("Soorin logo")).toBeInTheDocument();
   });
 });

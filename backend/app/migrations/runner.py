@@ -10,9 +10,15 @@ import sys
 from sqlalchemy import Engine, text
 
 from ..database import engine
-from . import v0001_atlassian_domain, v0002_product_governance
+from . import (
+    v0001_atlassian_domain, v0002_product_governance, v0003_price_analyzer,
+    v0004_help_guides,
+)
 
-MIGRATIONS = [v0001_atlassian_domain, v0002_product_governance]
+MIGRATIONS = [
+    v0001_atlassian_domain, v0002_product_governance, v0003_price_analyzer,
+    v0004_help_guides,
+]
 
 
 def _ensure_version_table(db_engine: Engine) -> None:

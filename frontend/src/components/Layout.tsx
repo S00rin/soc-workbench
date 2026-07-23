@@ -10,20 +10,23 @@ const NAV: { group: string; items: NavItem[] }[] = [
     { to: "/integrations", icon: "03", label: "Integration Hub", module: "integrations" },
     { to: "/intelligence", icon: "04", label: "Intelligence", module: "intelligence" },
     { to: "/reports", icon: "05", label: "Reports", module: "reports" },
+    { to: "/price-analyzer", icon: "06", label: "Price Analyzer", module: "price_analyzer" },
   ] },
   { group: "Manage", items: [
-    { to: "/operations", icon: "06", label: "Operations", module: "operations" },
-    { to: "/prompts", icon: "07", label: "Prompt Library", module: "prompts" },
-    { to: "/admin/access", icon: "08", label: "Access & Features", admin: true },
-    { to: "/settings", icon: "09", label: "Settings", module: "settings" },
+    { to: "/operations", icon: "07", label: "Operations", module: "operations" },
+    { to: "/prompts", icon: "08", label: "Prompt Library", module: "prompts" },
+    { to: "/admin/access", icon: "09", label: "Access & Features", admin: true },
+    { to: "/settings", icon: "10", label: "Settings", module: "settings" },
+    { to: "/help", icon: "?", label: "Help Guides" },
   ] },
   { group: "Soorin", items: [{ to: "/about-sorin", icon: "S", label: "معرفی سورین" }] },
 ];
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard", "/data": "Data & IoCs", "/integrations": "Integration Hub",
-  "/intelligence": "Intelligence", "/reports": "Reports", "/operations": "Operations",
-  "/prompts": "Prompt Library", "/settings": "Settings", "/admin/access": "Access & Feature Control",
+  "/intelligence": "Intelligence", "/reports": "Reports", "/price-analyzer": "Price Analyzer",
+  "/operations": "Operations", "/prompts": "Prompt Library", "/settings": "Settings",
+  "/admin/access": "Access & Feature Control", "/help": "Help Guides",
   "/about-sorin": "معرفی سورین",
 };
 

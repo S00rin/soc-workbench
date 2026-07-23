@@ -16,6 +16,8 @@ import Prompts from "./pages/Prompts";
 import AccessAdmin from "./pages/AccessAdmin";
 import AboutSorin from "./pages/AboutSorin";
 import PasswordChange from "./pages/PasswordChange";
+import PriceAnalyzer from "./pages/PriceAnalyzer";
+import Help from "./pages/Help";
 
 type AuthState = "checking" | "in" | "out";
 
@@ -56,10 +58,12 @@ export default function App() {
         <Route path="/integrations" element={<Allowed module="integrations"><IntegrationHub /></Allowed>} />
         <Route path="/intelligence" element={<Allowed module="intelligence"><IntelligenceHub /></Allowed>} />
         <Route path="/reports" element={<Allowed module="reports"><Reports /></Allowed>} />
+        <Route path="/price-analyzer" element={<Allowed module="price_analyzer"><PriceAnalyzer /></Allowed>} />
         <Route path="/operations" element={<Allowed module="operations"><OperationsHub /></Allowed>} />
         <Route path="/prompts" element={<Allowed module="prompts"><Prompts /></Allowed>} />
         <Route path="/settings" element={<Allowed module="settings"><Settings /></Allowed>} />
         <Route path="/admin/access" element={access.user.role === "admin" ? <AccessAdmin /> : <Navigate to="/" replace />} />
+        <Route path="/help" element={<Help />} />
         <Route path="/about-sorin" element={<AboutSorin />} />
 
         {/* Backward-compatible URLs now land in the compact hubs. */}

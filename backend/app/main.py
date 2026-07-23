@@ -17,10 +17,10 @@ from .jobs.scheduler import shutdown_scheduler, start_scheduler
 from .logging_config import get_logger, setup_logging
 from .services.access_middleware import ProductAccessMiddleware
 from .routers import (
-    atlassian, automation, governance, integration_chat, intel, jira, llm, notifications, prompts,
-    reports, search, splunk, wikijs,
+    atlassian, automation, governance, help, integration_chat, intel, jira, llm, notifications,
+    price_analyzer, prompts, reports, search, splunk, wikijs,
 )
-from .services import access_control, atlassian_connections, intelligence_automation, settings_service
+from .services import access_control, atlassian_connections, help_guides, intelligence_automation, settings_service
 
 setup_logging()
 logger = get_logger(__name__)
@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
         access_control.seed_access_defaults(db)
         atlassian_connections.seed_legacy_jira_connection(db)
         intelligence_automation.seed_default_sources(db)
+        help_guides.seed_default_guides(db)
     finally:
         db.close()
     start_scheduler()
@@ -59,7 +60,7 @@ app.add_middleware(ProductAccessMiddleware)
 for module in (
     auth, settings_api, dashboard, documents, knowledge, iocs, projects, jobs,
     jira, atlassian, governance, wikijs, integration_chat, splunk, intel, reports, notifications, prompts,
-    llm, search, automation,
+    llm, search, automation, price_analyzer, help,
 ):
     app.include_router(module.router)
 

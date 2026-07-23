@@ -19,6 +19,7 @@ PATH_MODULES = [
     (("/api/atlassian", "/api/jira", "/api/splunk", "/api/integrations", "/api/wikijs"), "integrations"),
     (("/api/intel", "/api/automation"), "intelligence"),
     (("/api/reports",), "reports"),
+    (("/api/price-analyzer",), "price_analyzer"),
     (("/api/jobs", "/api/notifications", "/api/backup"), "operations"),
     (("/api/prompts", "/api/llm"), "prompts"),
     (("/api/settings",), "settings"),

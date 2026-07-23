@@ -11,6 +11,8 @@ from .governance import (
     ExternalConnection, FeaturePolicy, IntegrationChatSession,
     IntegrationChatTurn, UserAccount, UserActivity,
 )
+from .help import HelpGuide
+from .price_analyzer import Contract, ContractSection, RACIEntry, WBSItem
 
 __all__ = [
     "Setting", "Job", "SensitivePattern", "TokenMapping", "Document",
@@ -22,4 +24,6 @@ __all__ = [
     "IntegrationHistory",
     "UserAccount", "FeaturePolicy", "ExternalConnection",
     "IntegrationChatSession", "IntegrationChatTurn", "UserActivity",
+    "HelpGuide",
+    "Contract", "ContractSection", "WBSItem", "RACIEntry",
 ]
