@@ -18,6 +18,13 @@ an SQLite backing store.
 - **Projects** — group documents, indicators, and findings per investigation.
 - **Internet intelligence** — pull and normalize RSS/Atom threat feeds.
 - **Reports** — assemble and export Markdown/HTML reports.
+- **Price Analyzer** — turn a Persian or English contract/SOW into an
+  editable person-hour estimate and cost breakdown (user-defined hourly
+  rates, overhead/contingency/tax/discount), a 3-level WBS with a Gantt
+  schedule, and an editable RACI matrix, exportable to PDF/Excel and linked
+  to Projects and Reports.
+- **Help guides** — built-in English/Farsi user and admin help guides,
+  editable by admins.
 - **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
   dynamic Jira field mapping, permission tests, redacted query history, smart
   comment approval, and controlled bulk jobs.
@@ -129,6 +136,9 @@ rollback instructions.
 
 See [Product governance, prompt chat and Wiki.js](docs/PRODUCT_GOVERNANCE_AND_WIKIJS.md)
 for user roles, feature expiry, Wiki.js API setup, deployment and rollback.
+
+See [Price Analyzer](docs/PRICE_ANALYZER.md) for the contract analysis,
+WBS/Gantt/RACI and cost estimation workflow.
 
 ## Data & storage
 

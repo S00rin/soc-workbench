@@ -50,7 +50,8 @@ database; there are no external service dependencies required to run it.
 
 ### `app/routers/` — integrations & extended features
 `jira`, `splunk`, `intel`, `reports`, `notifications`, `prompts`, `llm`,
-`search`, plus additional `backup`, `inputs`, and per-feature routers.
+`search`, `price_analyzer`, `help`, plus additional `backup`, `inputs`, and
+per-feature routers.
 
 ### `app/services/` — business logic
 - `document_processing`, `extract` — pull text out of PDF/DOCX/XLSX/PPTX/HTML.
@@ -64,6 +65,10 @@ database; there are no external service dependencies required to run it.
 - `notifier` — emit in-app notifications.
 - `backup` — database backup/restore.
 - `settings_service` — runtime settings persisted in the DB.
+- `price_analyzer` — contract section splitting (LLM or offline heuristic),
+  cost calculation, 3-level WBS/Gantt scheduling, RACI suggestion, and
+  PDF/Excel export. See [PRICE_ANALYZER.md](PRICE_ANALYZER.md).
+- `help_guides` — seeds the built-in English/Farsi user and admin help guides.
 
 ### Shared Atlassian integration domain
 
@@ -106,6 +111,25 @@ chat owner.
 `scheduler` wires APScheduler for recurring background work (feed refresh,
 backups). Started as part of the application lifespan.
 
+### Price analyzer & help guides
+
+The price analyzer (`app/models/price_analyzer.py`, `app/services/price_analyzer.py`,
+`app/routers/price_analyzer.py`) is its own module (`price_analyzer` in the
+module RBAC catalog) so it can be granted independently of Data/Reports.
+It reuses `services/extract` for document ingestion and `services/llm` for
+section splitting, falling back to a deterministic heading/paragraph
+heuristic when no LLM is configured. It integrates with existing features by
+linking a contract to a `Project`, pushing generated phase milestones into
+that project's milestone list, and pushing a cost summary into `Reports`.
+
+Help guides (`app/models/help.py`, `app/services/help_guides.py`,
+`app/routers/help.py`) are plain database rows seeded on startup in English
+and Farsi. The `/api/help/*` routes are deliberately left out of
+`PATH_MODULES` in `access_middleware.py` so every authenticated user can read
+user-audience guides regardless of their module grants; admin-audience
+guides are filtered by role in the router, and only admins can create/edit/
+delete guides.
+
 ## Data model & storage
 
 SQLAlchemy models live in `app/models/` (`core`, `content`, `entities`, plus a
@@ -121,6 +145,8 @@ connections, mappings, history, audit, bulk job/items, idempotency and Jira ↔
 Confluence content links without deleting or rewriting legacy Jira settings.
 `0002_product_governance` adds local users, feature scheduling, Wiki.js,
 connector chat and activity history without rewriting the `0001` domain.
+`0003_price_analyzer` adds contracts, sections, WBS items and RACI entries.
+`0004_help_guides` adds the help guide table.
 
 ## Configuration precedence
 

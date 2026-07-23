@@ -375,3 +375,27 @@ table.data tr:hover td { background: var(--bg-elev); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .loading-full { display: grid; place-items: center; min-height: 60vh; color: var(--text-dim); }
+
+/* Help guides */
+.help-layout { grid-template-columns: 240px 1fr; align-items: start; }
+.help-sidebar { padding: 10px; display: flex; flex-direction: column; gap: 2px; align-self: start; position: sticky; top: 16px; }
+.help-guide-link {
+  all: unset; display: block; box-sizing: border-box; width: 100%;
+  padding: 7px 10px; border-radius: var(--radius-sm); color: var(--text-dim);
+  cursor: pointer; font-size: 13px;
+}
+.help-guide-link:hover { background: var(--bg-elev-2); color: var(--text); }
+.help-guide-link.active { background: var(--bg-elev-2); color: var(--text); font-weight: 600; box-shadow: inset 2px 0 var(--accent); }
+@media (max-width: 920px) { .help-layout { grid-template-columns: 1fr; } .help-sidebar { position: static; } }
+
+/* Price analyzer: Gantt chart */
+.gantt-chart { display: flex; flex-direction: column; gap: 3px; }
+.gantt-row { display: grid; grid-template-columns: 260px 1fr; align-items: center; gap: 10px; min-height: 24px; }
+.gantt-label { font-size: 12.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gantt-track { position: relative; height: 16px; background: var(--bg-elev-2); border-radius: 4px; }
+.gantt-bar { position: absolute; top: 2px; height: 12px; border-radius: 3px; background: var(--accent); opacity: .55; }
+.gantt-bar.l1 { background: var(--purple); opacity: .85; }
+.gantt-bar.l2 { background: var(--accent); opacity: .7; }
+.gantt-bar.l3 { background: var(--accent); opacity: .45; }
+.gantt-progress { position: absolute; inset-inline-start: 0; top: 0; bottom: 0; background: rgba(255,255,255,.35); border-radius: 3px 0 0 3px; }
+@media (max-width: 720px) { .gantt-row { grid-template-columns: 140px 1fr; } .gantt-label { font-size: 11px; } }
