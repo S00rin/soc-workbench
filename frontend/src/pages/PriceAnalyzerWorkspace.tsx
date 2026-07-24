@@ -131,6 +131,12 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
     toast(`${r.milestones} milestone(s) on the linked project`, "ok");
   });
 
+  const saveToKnowledge = () => withBusy(async () => {
+    const r = await api.post(`/api/price-analyzer/contracts/${contractId}/to-knowledge`, {});
+    toast(r.created ? "Saved to the knowledge base (Data → Knowledge)" : "Knowledge base entry updated", "ok");
+    await load();
+  });
+
   const removeContract = () => {
     if (!confirm(`Delete "${contract.title}"? This cannot be undone.`)) return;
     withBusy(async () => {
@@ -173,7 +179,8 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
       {tab === "raci" && <RaciTab wbs={wbs} raci={raci} busy={busy} onSave={saveRaci} />}
       {tab === "settings" && (
         <SettingsTab contract={contract} projects={projects} busy={busy}
-          onUpdate={updateContract} onPushReport={pushToReport} onSyncMilestones={syncMilestones} onDelete={removeContract} />
+          onUpdate={updateContract} onPushReport={pushToReport} onSyncMilestones={syncMilestones}
+          onSaveToKnowledge={saveToKnowledge} onDelete={removeContract} />
       )}
     </div>
   );
@@ -246,8 +253,9 @@ function SectionsTab({ contract, sections, cost, busy, lastMethod, isFa, onAnaly
                       <input type="number" min={0} step={0.5} defaultValue={s.adjusted_hours}
                         onBlur={(e) => Number(e.target.value) !== s.adjusted_hours && onUpdate(s, { adjusted_hours: Number(e.target.value) })} />
                     </td>
-                    <td style={{ width: 110 }}>
-                      <input type="number" min={0} step={0.5} placeholder="role rate" defaultValue={s.hourly_rate_override ?? ""}
+                    <td style={{ width: 130 }}>
+                      <input type="number" min={0} step={10000} dir="ltr" placeholder="role rate" defaultValue={s.hourly_rate_override ?? ""}
+                        style={{ fontVariantNumeric: "tabular-nums" }}
                         onBlur={(e) => onUpdate(s, { hourly_rate_override: e.target.value === "" ? null : Number(e.target.value) })} />
                     </td>
                     <td className="dim">{row ? `${row.cost} ${cost.currency}` : "—"}</td>
@@ -457,9 +465,10 @@ function RaciTab({ wbs, raci, busy, onSave }: { wbs: WBSItem[]; raci: RaciEntry[
 
 // --- Settings --------------------------------------------------------------------
 
-function SettingsTab({ contract, projects, busy, onUpdate, onPushReport, onSyncMilestones, onDelete }: {
+function SettingsTab({ contract, projects, busy, onUpdate, onPushReport, onSyncMilestones, onSaveToKnowledge, onDelete }: {
   contract: Contract; projects: any[]; busy: boolean;
-  onUpdate: (patch: Record<string, any>) => void; onPushReport: () => void; onSyncMilestones: () => void; onDelete: () => void;
+  onUpdate: (patch: Record<string, any>) => void; onPushReport: () => void; onSyncMilestones: () => void;
+  onSaveToKnowledge: () => void; onDelete: () => void;
 }) {
   const coeff = contract.coefficients || {};
   const [rates, setRates] = useState<Record<string, number>>(coeff.rates || {});
@@ -503,8 +512,8 @@ function SettingsTab({ contract, projects, busy, onUpdate, onPushReport, onSyncM
           <div>
             <label>Language</label>
             <select defaultValue={contract.language} onChange={(e) => onUpdate({ language: e.target.value })}>
-              <option value="en">English</option>
               <option value="fa">فارسی</option>
+              <option value="en">English</option>
             </select>
           </div>
           <div>
@@ -519,11 +528,21 @@ function SettingsTab({ contract, projects, busy, onUpdate, onPushReport, onSyncM
         <textarea defaultValue={contract.notes} style={{ minHeight: 90 }} onBlur={(e) => e.target.value !== contract.notes && onUpdate({ notes: e.target.value })} />
 
         <div className="row" style={{ marginTop: 14, gap: 6, flexWrap: "wrap" }}>
+          <button className="btn-sm" disabled={busy} onClick={onSaveToKnowledge}>
+            {contract.knowledge_item_id ? "Update knowledge base entry" : "Save to knowledge base"}
+          </button>
           <button className="btn-sm" disabled={busy || !contract.project_id} onClick={onSyncMilestones}>Sync phase milestones to project</button>
           <button className="btn-sm" disabled={busy} onClick={onPushReport}>Push cost summary to Reports</button>
           <span className="spacer" />
           <button className="btn-danger btn-sm" disabled={busy} onClick={onDelete}>Delete contract</button>
         </div>
+        {contract.knowledge_item_id && (
+          <p className="faint" style={{ fontSize: 11.5, marginTop: 8 }}>
+            {contract.language === "fa"
+              ? "این قرارداد در پایگاه دانش ذخیره شده و از «داده‌ها ← دانش» قابل بازبینی و ویرایش است."
+              : "Saved in the knowledge base — review and edit it under Data → Knowledge."}
+          </p>
+        )}
       </div>
 
       <div className="card">
@@ -552,7 +571,9 @@ function SettingsTab({ contract, projects, busy, onUpdate, onPushReport, onSyncM
             {Object.entries(rates).map(([role, rate]) => (
               <tr key={role}>
                 <td className="dim">{role.replace("_", " ")}</td>
-                <td style={{ width: 100 }}><input type="number" min={0} value={rate} onChange={(e) => updateRate(role, Number(e.target.value))} /></td>
+                <td style={{ width: 140 }}><input type="number" min={0} step={10000} dir="ltr" value={rate}
+                  style={{ width: "100%", fontVariantNumeric: "tabular-nums" }}
+                  onChange={(e) => updateRate(role, Number(e.target.value))} /></td>
                 <td><button className="btn-sm btn-danger" onClick={() => removeRole(role)}>✕</button></td>
               </tr>
             ))}

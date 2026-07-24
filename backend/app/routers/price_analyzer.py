@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..database import get_db
 from ..logging_config import get_logger
+from ..models.content import KnowledgeItem
 from ..models.entities import Project, Report
 from ..models.price_analyzer import DEFAULT_COEFFICIENTS, Contract, ContractSection, RACIEntry, WBSItem
 from ..security import get_current_user
@@ -26,7 +27,7 @@ app_settings = get_settings()
 
 LLM_KEYS = (
     "llm_provider", "llm_model", "llm_base_url", "llm_max_tokens",
-    "llm_temperature", "llm_timeout", "llm_api_key", "claude_cli_path",
+    "llm_temperature", "llm_timeout", "llm_api_key", "claude_cli_path", "codex_cli_path",
 )
 
 
@@ -48,6 +49,7 @@ def _contract_out(row: Contract) -> dict:
         "language": row.language, "status": row.status, "source_type": row.source_type,
         "source_ref": row.source_ref, "coefficients": row.coefficients, "schedule_start": row.schedule_start,
         "summary": row.summary, "notes": row.notes, "created_by": row.created_by,
+        "knowledge_item_id": row.knowledge_item_id,
         "created_at": row.created_at, "updated_at": row.updated_at,
     }
 
@@ -497,3 +499,47 @@ def push_to_report(contract_id: int, db: Session = Depends(get_db), user: str = 
     db.commit()
     db.refresh(report)
     return {"report_id": report.id}
+
+
+@router.post("/contracts/{contract_id}/to-knowledge")
+def contract_to_knowledge(contract_id: int, db: Session = Depends(get_db), user: str = Depends(get_current_user)):
+    """Add (or refresh) the contract's extracted content in the central
+    knowledge base, where it can be reviewed and edited under Data → Knowledge.
+    Idempotent: re-running updates the linked entry instead of duplicating it."""
+    contract = _get_contract(db, contract_id)
+    content = (contract.source_text or "").strip()
+    if not content:
+        raise HTTPException(422, "This contract has no extracted content to save.")
+
+    sections = db.query(ContractSection).filter(ContractSection.contract_id == contract_id).order_by(ContractSection.order_index).all()
+    section_titles = [s.title for s in sections if s.title]
+    summary = contract.summary.strip() if contract.summary else ""
+    if not summary:
+        summary = "؛ ".join(section_titles[:8]) if section_titles else content[:280]
+
+    item: KnowledgeItem | None = None
+    if contract.knowledge_item_id:
+        item = db.get(KnowledgeItem, contract.knowledge_item_id)
+    created = item is None
+    if item is None:
+        item = KnowledgeItem()
+        db.add(item)
+
+    item.title = f"قرارداد: {contract.title}" if contract.language == "fa" else f"Contract: {contract.title}"
+    item.item_type = "contract"
+    item.content = content
+    item.summary = summary[:2000]
+    item.category = "Price Analyzer"
+    item.source = contract.source_ref or contract.source_type
+    item.related_project_id = contract.project_id
+    tags = ["price-analyzer", "contract"]
+    if contract.customer:
+        tags.append(contract.customer)
+    item.tags = tags
+    db.commit()
+    db.refresh(item)
+
+    if contract.knowledge_item_id != item.id:
+        contract.knowledge_item_id = item.id
+        db.commit()
+    return {"knowledge_id": item.id, "created": created}

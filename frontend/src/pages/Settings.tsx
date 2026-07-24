@@ -17,13 +17,14 @@ function label(key: string) {
 
 // Keys that should render as a dropdown instead of a free-text field.
 const SELECT_OPTIONS: Record<string, string[]> = {
-  llm_provider: ["anthropic", "openai", "claude_cli"],
+  llm_provider: ["anthropic", "openai", "claude_cli", "codex_cli"],
 };
 
 const KEY_HINTS: Record<string, string> = {
-  llm_provider: "claude_cli routes analysis through your local Claude Code agent — no API key needed.",
-  claude_cli_path: "Leave blank to find `claude` on PATH. Only set if it isn't found.",
-  llm_model: "For claude_cli use an alias (opus / sonnet / haiku) or a full model id.",
+  llm_provider: "No API key? Use claude_cli (Claude Code Pro) or codex_cli (ChatGPT Codex) to route analysis through the local CLI agent with your subscription.",
+  claude_cli_path: "Leave blank to find `claude` on PATH. Requires Claude Code installed and signed in. Only set the path if it isn't found.",
+  codex_cli_path: "Leave blank to find `codex` on PATH. Requires the Codex CLI installed and `codex login` completed. Only set the path if it isn't found.",
+  llm_model: "For claude_cli use an alias (opus / sonnet / haiku) or a full id; for codex_cli use a Codex model name; otherwise the provider's model id.",
   atlassian_history_retention_days: "History older than this many days is removed by the daily retention job.",
   atlassian_bulk_max_issues: "Hard maximum target count for one Jira or Confluence bulk job.",
   atlassian_auto_post_enabled: "Global safety flag; the connection must also explicitly allow auto-post.",

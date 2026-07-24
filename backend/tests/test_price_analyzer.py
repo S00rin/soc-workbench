@@ -12,7 +12,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.database import Base
+from app.models.content import KnowledgeItem
 from app.models.price_analyzer import Contract, ContractSection, DEFAULT_COEFFICIENTS, WBSItem
+from app.routers.price_analyzer import contract_to_knowledge
 from app.services import price_analyzer as pa
 
 SAMPLE_CONTRACT = """## Requirements gathering
@@ -129,6 +131,35 @@ def test_default_coefficients_are_toman_and_deep_copied():
     assert a["currency"] == "تومان"
     a["rates"]["developer"] = 1  # mutate one copy
     assert b["rates"]["developer"] != 1  # the other is unaffected (deep copy)
+
+
+def test_contract_to_knowledge_creates_then_updates_one_linked_entry(db):
+    contract = Contract(
+        title="سامانه فروشگاه", customer="Acme", language="fa",
+        source_type="file", source_ref="contract.pdf",
+        source_text="موضوع قرارداد: طراحی و توسعه سامانه فروشگاه اینترنتی.",
+        coefficients=dict(DEFAULT_COEFFICIENTS),
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+
+    first = contract_to_knowledge(contract.id, db=db, user="admin")
+    assert first["created"] is True
+    db.refresh(contract)
+    assert contract.knowledge_item_id == first["knowledge_id"]
+
+    item = db.get(KnowledgeItem, first["knowledge_id"])
+    assert item.item_type == "contract"
+    assert item.category == "Price Analyzer"
+    assert "طراحی و توسعه" in item.content
+    assert "price-analyzer" in item.tags
+
+    # Re-running updates the same entry rather than creating a duplicate.
+    second = contract_to_knowledge(contract.id, db=db, user="admin")
+    assert second["created"] is False
+    assert second["knowledge_id"] == first["knowledge_id"]
+    assert db.query(KnowledgeItem).count() == 1
 
 
 def test_compute_costs_applies_overhead_contingency_tax_and_discount():

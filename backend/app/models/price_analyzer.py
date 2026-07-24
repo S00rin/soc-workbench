@@ -59,6 +59,9 @@ class Contract(Base, TimestampMixin):
     schedule_start: Mapped[str] = mapped_column(String(30), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[str] = mapped_column(String(120), default="")
+    # Set once the contract's content has been pushed to the central knowledge
+    # base, so re-pushing updates that entry instead of creating duplicates.
+    knowledge_item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class ContractSection(Base, TimestampMixin):
