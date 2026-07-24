@@ -8,7 +8,8 @@ export type Contract = {
   id: number; title: string; customer: string; project_id: number | null;
   language: string; status: string; source_type: string; source_ref: string;
   coefficients: any; schedule_start: string; summary: string; notes: string;
-  created_by: string; created_at: string; updated_at: string;
+  created_by: string; knowledge_item_id: number | null;
+  created_at: string; updated_at: string;
 };
 
 export default function PriceAnalyzer() {
@@ -174,8 +175,17 @@ function NewContractModal({ mode, onClose, onCreated }: { mode: "text" | "file";
         </>
       ) : (
         <>
-          <label>Contract file (PDF, DOCX, TXT, HTML, ...)</label>
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <label>Contract file (PDF, DOCX, TXT, HTML, or a scan/image)</label>
+          <input
+            type="file"
+            accept=".pdf,.docx,.txt,.md,.html,.htm,.csv,.json,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
+          <div className="faint" style={{ fontSize: 11.5, marginTop: 4 }}>
+            {language === "fa"
+              ? "پی‌دی‌اف اسکن‌شده یا عکس هم پذیرفته می‌شود؛ متن آن‌ها به‌صورت خودکار با OCR استخراج می‌شود."
+              : "Scanned PDFs and images are accepted — their text is extracted automatically with OCR."}
+          </div>
         </>
       )}
     </Modal>

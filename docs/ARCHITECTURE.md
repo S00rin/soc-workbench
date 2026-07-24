@@ -54,12 +54,16 @@ database; there are no external service dependencies required to run it.
 per-feature routers.
 
 ### `app/services/` — business logic
-- `document_processing`, `extract` — pull text out of PDF/DOCX/XLSX/PPTX/HTML.
+- `document_processing`, `extract` — pull text out of PDF/DOCX/XLSX/PPTX/HTML,
+  and OCR scanned PDFs and image files (Tesseract, `fas`+`eng`) when there is
+  no text layer. OCR degrades gracefully when the engine isn't installed.
 - `sensitive_data` — tokenize/detokenize sensitive strings; the reversible
   mapping is encrypted at rest with `SECRET_KEY`.
 - `entities`, `optimizer` — entity extraction and content optimization.
 - `intel_collector` — fetch and normalize RSS/Atom threat feeds.
-- `llm` — provider abstraction over Anthropic (and OpenAI-compatible) APIs.
+- `llm` — provider abstraction over Anthropic and OpenAI-compatible APIs, plus
+  local CLI agents (`claude_cli`, `codex_cli`) that use a Claude Code / ChatGPT
+  Codex subscription with no API key.
 - `jira_client`, `splunk_client` — thin integration clients.
 - `report_builder` — assemble Markdown/HTML reports.
 - `notifier` — emit in-app notifications.
@@ -146,7 +150,9 @@ Confluence content links without deleting or rewriting legacy Jira settings.
 `0002_product_governance` adds local users, feature scheduling, Wiki.js,
 connector chat and activity history without rewriting the `0001` domain.
 `0003_price_analyzer` adds contracts, sections, WBS items and RACI entries.
-`0004_help_guides` adds the help guide table.
+`0004_help_guides` adds the help guide table. `0005_contract_knowledge_link`
+adds `knowledge_item_id` to contracts (idempotent `ALTER TABLE`, so it only
+touches databases that predate the column).
 
 ## Configuration precedence
 

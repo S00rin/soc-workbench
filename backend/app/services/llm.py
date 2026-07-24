@@ -21,9 +21,12 @@ class LLMError(Exception):
     pass
 
 
+CLI_PROVIDERS = {"claude_cli", "codex_cli"}
+
+
 @dataclass
 class LLMConfig:
-    provider: str  # anthropic | openai | claude_cli
+    provider: str  # anthropic | openai | claude_cli | codex_cli
     model: str
     api_key: str
     base_url: str = ""
@@ -31,11 +34,13 @@ class LLMConfig:
     temperature: float = 0.3
     timeout: int = 120
     claude_cli_path: str = ""  # optional explicit path to the `claude` binary
+    codex_cli_path: str = ""  # optional explicit path to the `codex` binary
 
     @property
     def has_credentials(self) -> bool:
-        """The local Claude Code CLI uses its own auth, so it needs no api_key."""
-        return self.provider == "claude_cli" or bool(self.api_key)
+        """Local CLI agents (Claude Code / Codex) use their own subscription
+        auth, so they need no api_key."""
+        return self.provider in CLI_PROVIDERS or bool(self.api_key)
 
 
 @dataclass
@@ -64,6 +69,7 @@ def config_from_settings(overrides: dict | None = None) -> LLMConfig:
         temperature=float(o.get("llm_temperature") or 0.3),
         timeout=int(o.get("llm_timeout") or s.llm_timeout),
         claude_cli_path=o.get("claude_cli_path", ""),
+        codex_cli_path=o.get("codex_cli_path", ""),
     )
 
 
@@ -71,13 +77,16 @@ def complete(system: str, user: str, cfg: LLMConfig) -> LLMResult:
     """Run a single completion. Raises LLMError with a clear message on failure."""
     if not cfg.has_credentials:
         raise LLMError(
-            "No LLM credentials configured. Set an API key in Settings → LLM, "
-            "or select the 'claude_cli' provider to use the local Claude Code agent."
+            "No LLM credentials configured. Set an API key in Settings → LLM, or "
+            "select the 'claude_cli' (Claude Code) or 'codex_cli' (ChatGPT Codex) "
+            "provider to use a local CLI agent with your existing subscription."
         )
     logger.info("LLM call provider=%s model=%s (~%d input tokens)",
                 cfg.provider, cfg.model, estimate_tokens(system + user))
     if cfg.provider == "claude_cli":
         return _claude_cli(system, user, cfg)
+    if cfg.provider == "codex_cli":
+        return _codex_cli(system, user, cfg)
     if cfg.provider == "anthropic":
         return _anthropic(system, user, cfg)
     return _openai_compatible(system, user, cfg)
@@ -158,6 +167,68 @@ def _claude_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
         model=model_name,
         input_tokens=usage.get("input_tokens", estimate_tokens(system + user)),
         output_tokens=usage.get("output_tokens", estimate_tokens(text)),
+    )
+
+
+def _build_codex_command(exe: str, model: str) -> list[str]:
+    """Non-interactive Codex invocation. `codex exec` runs a single prompt
+    (read from stdin) and prints the assistant's final message to stdout,
+    authenticated by the user's `codex login` session — no API key needed."""
+    cmd = [exe, "exec", "--skip-git-repo-check", "--color", "never"]
+    if model:
+        cmd += ["--model", model]
+    cmd.append("-")  # read the prompt from stdin instead of argv
+    return cmd
+
+
+def _codex_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
+    """Run the completion through the local OpenAI Codex CLI (`codex exec`).
+
+    Uses the user's existing ChatGPT/Codex subscription auth instead of an API
+    key. The combined prompt is fed on stdin so large documents don't hit the
+    command-line length limit, and it runs in a temp dir so it never touches
+    the project. Best-effort: requires the `codex` CLI to be installed and
+    `codex login` to have been run.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    exe = cfg.codex_cli_path.strip() or shutil.which("codex") or "codex"
+    model = (cfg.model or "").strip()
+    prompt = f"{system.strip()}\n\n{user}" if system.strip() else user
+    cmd = _build_codex_command(exe, model)
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=cfg.timeout,
+            cwd=tempfile.gettempdir(),
+        )
+    except FileNotFoundError as e:
+        raise LLMError(
+            f"Codex CLI not found ('{exe}'). Install it (npm i -g @openai/codex), run "
+            "'codex login', or set 'codex_cli_path' in Settings → LLM to its full path."
+        ) from e
+    except subprocess.TimeoutExpired as e:
+        raise LLMError(f"Codex CLI timed out after {cfg.timeout}s.") from e
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()[:500]
+        raise LLMError(f"Codex CLI failed (exit {proc.returncode}): {detail}")
+
+    text = (proc.stdout or "").strip()
+    if not text:
+        raise LLMError("Codex CLI returned no output. Ensure you have run 'codex login'.")
+    return LLMResult(
+        text=text,
+        model=model or "codex",
+        input_tokens=estimate_tokens(system + user),
+        output_tokens=estimate_tokens(text),
     )
 
 

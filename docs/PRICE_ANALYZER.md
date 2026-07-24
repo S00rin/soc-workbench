@@ -8,7 +8,10 @@ into an editable, priced project plan:
 1. **Ingest** — upload a file (PDF, DOCX, XLSX, PPTX, HTML, CSV, text) or
    paste text. Extraction reuses `services/extract`, the same pipeline used
    by document processing, so it is script-agnostic: Farsi text extracts as
-   Unicode text like any other language.
+   Unicode text like any other language. **Scanned PDFs and image files**
+   (PNG/JPG/TIFF/BMP/WebP) are read with OCR (Tesseract, `fas`+`eng`) — a
+   scanned PDF with no text layer is rasterized page-by-page and OCR'd into
+   clean text automatically. See [OCR ingestion](#ocr-ingestion) below.
 2. **Analyze** — the contract text is split into scope-of-work sections. If
    an LLM provider is configured (Settings → LLM), it splits the text and
    suggests a category, discipline/role and person-hour estimate per
@@ -47,6 +50,42 @@ into an editable, priced project plan:
   Reports pipeline.
 - Access is gated by its own module RBAC entry (`price_analyzer`), granted
   per user/role under **Access & Features** like every other module.
+- **Knowledge base** — `Save to knowledge base` (contract Settings tab) pushes
+  the contract's extracted content into the central knowledge base as a
+  `KnowledgeItem` (item type `contract`, category `Price Analyzer`, linked to
+  the project), where it is reviewable and editable under **Data → Knowledge**.
+  It's idempotent: the contract stores `knowledge_item_id`, so re-saving
+  updates the same entry instead of creating duplicates.
+
+## OCR ingestion
+
+`services/extract` handles scanned input transparently:
+
+- **Image files** are OCR'd directly (EXIF-oriented, grayscaled for accuracy).
+- **PDFs** try their embedded text layer first; if that layer is empty or
+  negligible (a scan), each page is rasterized with `pypdfium2` (~180 DPI) and
+  OCR'd, emitting one `## Page N` block per page.
+- OCR output is cleaned (blank lines dropped, whitespace trimmed) so stored
+  text reads cleanly rather than arriving garbled.
+- Languages default to `fas+eng` (Persian + English). OCR needs the Tesseract
+  engine and language packs on the host; when they're absent the extractor
+  returns an actionable "install Tesseract" message rather than a broken
+  result, and text-based files are unaffected.
+
+## Using it without an API key
+
+The analyzer's AI split uses the shared `services/llm` provider layer, so it
+works with a subscription-based local CLI agent and **no API key**:
+
+- **Claude Code Pro** → set provider `claude_cli` in Settings → LLM (requires
+  Claude Code installed and signed in). Model can be an alias (`opus` /
+  `sonnet` / `haiku`).
+- **ChatGPT Codex** → set provider `codex_cli` (requires the Codex CLI
+  installed and `codex login` completed).
+
+Both shell out to the local agent with your existing subscription auth, feed
+the prompt on stdin, and run in a temp dir so nothing touches your project.
+The API-key providers (`anthropic`, `openai`) remain available.
 
 ## Farsi PDF export
 

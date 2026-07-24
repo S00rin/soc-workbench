@@ -12,7 +12,8 @@ an SQLite backing store.
 ## Features
 
 - **Input processing** — extract text from PDF, DOCX, XLSX, PPTX, HTML, and
-  Markdown, with automatic sensitive-data tokenization.
+  Markdown, with automatic sensitive-data tokenization. Scanned PDFs and image
+  files (PNG/JPG/TIFF/…) are read with OCR (Persian + English).
 - **Knowledge base** — store and search extracted content and analyst notes.
 - **IoCs** — track indicators of compromise across investigations.
 - **Projects** — group documents, indicators, and findings per investigation.
@@ -22,7 +23,8 @@ an SQLite backing store.
   editable person-hour estimate and cost breakdown (user-defined hourly
   rates, overhead/contingency/tax/discount), a 3-level WBS with a Gantt
   schedule, and an editable RACI matrix, exportable to PDF/Excel and linked
-  to Projects and Reports.
+  to Projects, Reports and the knowledge base. Accepts scanned/image
+  contracts via OCR and defaults to Toman/Farsi.
 - **Help guides** — built-in English/Farsi user and admin help guides,
   editable by admins.
 - **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
@@ -36,7 +38,9 @@ an SQLite backing store.
 - **Product governance** — multiple local users, module RBAC, activity history,
   and admin-controlled feature start/expiry windows.
 - **LLM assistance** — Anthropic (Claude) and optional OpenAI-compatible
-  endpoints, with a reusable prompt library and request history.
+  endpoints, with a reusable prompt library and request history. No API key?
+  Use the `claude_cli` (Claude Code) or `codex_cli` (ChatGPT Codex) provider to
+  run analysis through a local CLI agent with your existing subscription.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
 - **Notifications** — in-app notification feed for job and system events.
 
@@ -47,7 +51,8 @@ an SQLite backing store.
 | Backend   | Python 3.12+, FastAPI, SQLAlchemy 2, APScheduler        |
 | Database  | SQLite (file-based, under `data/`)                      |
 | Frontend  | React 18, TypeScript, Vite, React Router               |
-| LLM       | `anthropic` SDK; optional OpenAI-compatible endpoint    |
+| LLM       | `anthropic` SDK; OpenAI-compatible endpoint; or local `claude`/`codex` CLI (no API key) |
+| OCR       | Tesseract (`fas`+`eng`) via pytesseract + pypdfium2 (optional)   |
 | Auth      | JWT with database users, module RBAC and encrypted secrets |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper walkthrough.
@@ -79,6 +84,18 @@ uvicorn app.main:app --reload --port 8000
 
 The API is served under `http://127.0.0.1:8000/api`. Health check:
 `GET /api/health`.
+
+**Optional — OCR for scanned PDFs and images.** Text-based files work out of
+the box. To read scanned/image documents you also need the Tesseract engine
+and language packs installed on the host:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install tesseract-ocr tesseract-ocr-fas tesseract-ocr-eng poppler-utils
+```
+
+Without it, text-based extraction still works and image/scanned input returns
+a clear "install Tesseract" message instead of failing silently.
 
 ### 3. Frontend
 
