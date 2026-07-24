@@ -34,6 +34,7 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
   const [projects, setProjects] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("sections");
   const [busy, setBusy] = useState(false);
+  const [lastMethod, setLastMethod] = useState<"ai" | "heuristic" | null>(null);
   const toast = useToast();
 
   async function load() {
@@ -69,7 +70,8 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
   }
 
   const analyze = () => withBusy(async () => {
-    await api.post(`/api/price-analyzer/contracts/${contractId}/analyze`, {});
+    const res = await api.post(`/api/price-analyzer/contracts/${contractId}/analyze`, {});
+    setLastMethod(res?.method === "ai" ? "ai" : "heuristic");
     toast("Contract analyzed", "ok");
     await load();
   });
@@ -160,7 +162,7 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
       </div>
 
       {tab === "sections" && (
-        <SectionsTab contract={contract} sections={sections} cost={cost} busy={busy}
+        <SectionsTab contract={contract} sections={sections} cost={cost} busy={busy} lastMethod={lastMethod} isFa={isFa}
           onAnalyze={analyze} onUpdate={updateSection} onDelete={deleteSection} onAdd={addSection} />
       )}
       {tab === "wbs" && (
@@ -179,14 +181,23 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
 
 // --- Sections & Cost ---------------------------------------------------------
 
-function SectionsTab({ contract, sections, cost, busy, onAnalyze, onUpdate, onDelete, onAdd }: {
+function SectionsTab({ contract, sections, cost, busy, lastMethod, isFa, onAnalyze, onUpdate, onDelete, onAdd }: {
   contract: Contract; sections: Section[]; cost: Cost; busy: boolean;
+  lastMethod: "ai" | "heuristic" | null; isFa: boolean;
   onAnalyze: () => void; onUpdate: (s: Section, patch: Partial<Section>) => void; onDelete: (s: Section) => void; onAdd: () => void;
 }) {
   const roles = Object.keys(contract.coefficients?.rates || {});
+  const heuristicHint = isFa
+    ? "این تحلیل بدون مدل زبانی و به‌صورت خودکار انجام شد (تقسیم بر اساس ساختار قرارداد). برای استخراج دقیق‌تر بخش‌ها و تعهدات فنی، یک مدل زبانی را در «تنظیمات ← LLM» پیکربندی کنید. برآوردها یک نقطه شروع قابل‌ویرایش هستند."
+    : "This analysis ran offline without an LLM (structure-based split). For sharper section and technical-obligation extraction, configure an LLM under Settings → LLM. The estimates are an editable starting point.";
 
   return (
     <>
+      {lastMethod === "heuristic" && (
+        <div className="notice compact mb" style={{ border: "1px solid var(--border-strong)", borderRadius: 8, padding: "10px 12px", color: "var(--text-dim)", fontSize: 12.5 }}>
+          {heuristicHint}
+        </div>
+      )}
       <div className="card mb">
         <div className="card-head">
           <h3>Cost summary</h3>

@@ -74,24 +74,34 @@ def _extract_json_array(text: str) -> list:
 
 
 SPLIT_SYSTEM_PROMPT_EN = (
-    "You are a senior project manager and cost estimator reviewing a client contract "
-    "or statement of work. Split the document into distinct scope-of-work sections "
-    "(deliverables, phases or clauses that require effort). For EACH section return "
-    "a JSON object with keys: title (short), category (one of: {categories}), "
-    "role (one of: {roles}), excerpt (<=280 chars quoting or summarizing the relevant "
-    "contract text), estimated_hours (a realistic integer number of person-hours to "
-    "deliver that section). Return ONLY a JSON array of these objects, no prose, no "
-    "markdown fences. Do not invent scope that is not implied by the text."
+    "You are a senior project manager and cost estimator analyzing a client contract "
+    "or statement of work (the document may be in Persian/Farsi or English). Read the "
+    "WHOLE document and extract the scope of work: the concrete deliverables and "
+    "technical obligations the contractor/vendor must perform. Persian contracts often "
+    "express these as numbered clauses (ماده, تبصره, بند, فصل) or under headings like "
+    "'موضوع قرارداد', 'شرح خدمات', 'تعهدات مجری/پیمانکار'; treat each distinct "
+    "deliverable or technical obligation as one section. MERGE or DROP purely legal or "
+    "administrative clauses (parties, payment terms, termination, confidentiality, "
+    "dispute resolution, force majeure) — do not bill effort for those. For EACH scope "
+    "section return a JSON object with keys: title (short, in the document's language), "
+    "category (one of: {categories}), role (one of: {roles}), excerpt (<=280 chars "
+    "quoting or summarizing the obligation), estimated_hours (a realistic integer of "
+    "person-hours to deliver it). Return ONLY a JSON array of these objects, no prose, "
+    "no markdown fences. Base every section on the text; do not invent scope."
 )
 SPLIT_SYSTEM_PROMPT_FA = (
-    "شما یک مدیر پروژه ارشد و کارشناس برآورد هزینه هستید که یک قرارداد یا شرح خدمات "
-    "مشتری را بررسی می‌کنید. سند را به بخش‌های مجزای دامنه کار (تحویل‌شدنی‌ها، فازها یا "
-    "بندهایی که نیازمند تلاش هستند) تقسیم کنید. برای هر بخش یک شیء JSON با کلیدهای "
-    "title (کوتاه)، category (یکی از: {categories})، role (یکی از: {roles})، excerpt "
-    "(حداکثر ۲۸۰ کاراکتر نقل‌قول یا خلاصه‌ای از متن قرارداد مرتبط) و estimated_hours "
-    "(یک عدد صحیح واقع‌بینانه از نفر-ساعت لازم برای ارائه آن بخش) برگردانید. فقط یک "
-    "آرایه JSON از این اشیاء را بدون هیچ توضیح یا نشانه مارک‌داون برگردانید. دامنه‌ای "
-    "را که از متن برداشت نمی‌شود اختراع نکنید."
+    "شما یک مدیر پروژه ارشد و کارشناس برآورد هزینه هستید که یک قرارداد یا شرح خدمات مشتری "
+    "(به زبان فارسی یا انگلیسی) را تحلیل می‌کنید. کل سند را بخوانید و «دامنه کار» را استخراج "
+    "کنید؛ یعنی تحویل‌شدنی‌ها و تعهدات فنی مشخصی که مجری/پیمانکار باید انجام دهد. قراردادهای "
+    "فارسی معمولاً این موارد را در قالب ماده، تبصره، بند و فصل، یا زیر عنوان‌هایی مانند «موضوع "
+    "قرارداد»، «شرح خدمات» و «تعهدات مجری/پیمانکار» بیان می‌کنند؛ هر تحویل‌شدنی یا تعهد فنی "
+    "مجزا را یک بخش در نظر بگیرید. بندهای صرفاً حقوقی یا اداری (طرفین، شرایط و نحوه پرداخت، "
+    "فسخ، محرمانگی، حل اختلاف، فورس‌ماژور) را ادغام یا حذف کنید و برایشان تلاش و هزینه در نظر "
+    "نگیرید. برای هر بخشِ دامنه کار یک شیء JSON با کلیدهای title (کوتاه، به زبان سند)، "
+    "category (یکی از: {categories})، role (یکی از: {roles})، excerpt (حداکثر ۲۸۰ کاراکتر "
+    "نقل‌قول یا خلاصه تعهد) و estimated_hours (عدد صحیح واقع‌بینانه نفر-ساعت) برگردانید. فقط یک "
+    "آرایه JSON از این اشیاء را بدون هیچ توضیح یا نشانه مارک‌داون برگردانید. هر بخش را بر پایه "
+    "متن بسازید؛ دامنه‌ای که در متن نیست اختراع نکنید."
 )
 
 
@@ -110,22 +120,26 @@ def split_sections_with_llm(text: str, language: str, coefficients: dict, cfg) -
     for i, item in enumerate(raw_sections):
         if not isinstance(item, dict) or not str(item.get("title") or "").strip():
             continue
-        category = str(item.get("category") or "other").strip().lower()
+        title = str(item["title"]).strip()
+        excerpt = str(item.get("excerpt") or "").strip()
+        # Trust the model's labels, but repair anything missing or out of range
+        # with the same keyword inference the offline path uses.
+        category = str(item.get("category") or "").strip().lower()
         if category not in CATEGORIES:
-            category = "other"
-        role = str(item.get("role") or roles[0]).strip().lower()
+            category = _categorize(title, excerpt)
+        role = str(item.get("role") or "").strip().lower()
         if role not in roles:
-            role = roles[0]
+            role = _infer_role(title, excerpt, roles)
         try:
             hours = float(item.get("estimated_hours") or 0)
         except (TypeError, ValueError):
             hours = 0.0
         sections.append({
             "order_index": i,
-            "title": str(item["title"]).strip()[:300],
+            "title": title[:300],
             "category": category,
             "role": role,
-            "excerpt": str(item.get("excerpt") or "").strip()[:280],
+            "excerpt": excerpt[:280],
             "estimated_hours": max(0.0, round(hours, 1)),
         })
     if not sections:
@@ -133,43 +147,241 @@ def split_sections_with_llm(text: str, language: str, coefficients: dict, cfg) -
     return sections
 
 
-_HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
+# --- Offline (no-LLM) contract structure analysis ---------------------------
+#
+# The heuristic path has to stand in for a model, so it does real work: it
+# understands Persian contract structure (ماده/تبصره/بند/فصل and numbered
+# clauses), classifies each section into a delivery category and a discipline
+# from bilingual keyword tables, and down-weights purely legal/administrative
+# clauses to zero effort. It is still a first draft to edit, not a final quote.
+
+_ZWNJ = "‌"
 
 
-def split_sections_heuristic(text: str, coefficients: dict) -> list[dict]:
-    """Offline fallback (no LLM configured): split on markdown headings, or on
-    blank-line-separated paragraphs if the document has none. Applies a flat,
-    word-count-based estimate so the workflow still produces an editable
-    starting point without any AI provider configured."""
-    roles = _roles_from_coefficients(coefficients)
-    role = roles[0]
-    matches = [m for m in _HEADING_RE.finditer(text) if not m.group(2).strip().lower().startswith("page ")]
-    chunks: list[tuple[str, str]] = []
-    if matches:
-        for i, m in enumerate(matches):
-            start = m.end()
-            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-            chunks.append((m.group(2).strip(), text[start:end].strip()))
-    if not chunks:
-        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-        for i, p in enumerate(paragraphs[:40], 1):
-            first_line = p.splitlines()[0][:80].strip()
-            chunks.append((first_line or f"Section {i}", p))
+def _norm(text: str) -> str:
+    """Fold Persian text so substring keyword matching is robust: drop the
+    zero-width non-joiner, unify Arabic yeh/kaf with their Persian forms, lower
+    case, and collapse whitespace."""
+    text = (text or "").replace(_ZWNJ, " ").replace("ي", "ی").replace("ك", "ک")
+    return re.sub(r"\s+", " ", text).strip().lower()
 
-    sections = []
-    for i, (title, body) in enumerate(chunks):
-        if not body:
+
+# Keyword tables are written in the normalized form (spaces instead of ZWNJ).
+CATEGORY_KEYWORDS: dict[str, list[str]] = {
+    "requirements": [
+        "requirement", "analysis", "specification", "scope of work", "discovery",
+        "نیازمندی", "نیازسنجی", "نیاز سنجی", "تحلیل", "امکان سنجی", "شرح خدمات",
+        "مشخصات فنی", "برداشت اطلاعات", "شناخت", "مطالعه",
+    ],
+    "design": [
+        "design", "architecture", "wireframe", "prototype", "mockup", "ui", "ux",
+        "طراحی", "معماری", "رابط کاربری", "تجربه کاربری", "نمونه اولیه", "دیزاین",
+    ],
+    "development": [
+        "develop", "implement", "implementation", "build", "coding", "programming",
+        "backend", "frontend", "database", "integration", "module",
+        "توسعه", "پیاده سازی", "برنامه نویسی", "کدنویسی", "ساخت", "بک اند", "فرانت اند",
+        "پایگاه داده", "وب سرویس", "یکپارچه سازی", "ماژول", "سامانه",
+    ],
+    "testing": [
+        "test", "qa", "quality assurance", "verification", "validation", "uat",
+        "تست", "آزمون", "آزمایش", "کنترل کیفیت", "تضمین کیفیت", "صحت سنجی", "اعتبارسنجی",
+    ],
+    "deployment": [
+        "deploy", "release", "installation", "go live", "rollout", "launch",
+        "استقرار", "نصب", "راه اندازی", "انتشار", "بهره برداری", "عملیاتی",
+    ],
+    "training": [
+        "training", "handover", "documentation", "manual", "knowledge transfer",
+        "آموزش", "تحویل", "مستندسازی", "مستند سازی", "راهنما", "مستندات", "انتقال دانش",
+    ],
+    "project_management": [
+        "project management", "planning", "coordination", "kickoff", "reporting",
+        "governance", "milestone", "زمان بندی",
+        "مدیریت پروژه", "برنامه ریزی", "هماهنگی", "راهبری", "گزارش دهی", "کنترل پروژه", "نظارت",
+    ],
+    "support": [
+        "support", "maintenance", "warranty", "sla", "helpdesk",
+        "پشتیبانی", "نگهداری", "نگه داری", "گارانتی", "ضمانت", "خدمات پس از فروش",
+    ],
+    "initiation": [
+        "initiation", "objective", "preliminary", "feasibility", "kickoff",
+        "کلیات", "موضوع قرارداد", "اهداف", "شروع پروژه", "آغاز", "پیش نیاز",
+    ],
+}
+
+ROLE_KEYWORDS: dict[str, list[str]] = {
+    "developer": [
+        "develop", "implement", "coding", "programming", "backend", "frontend",
+        "database", "توسعه", "پیاده سازی", "برنامه نویسی", "کدنویسی", "بک اند", "فرانت اند", "سامانه",
+    ],
+    "designer": [
+        "design", "ui", "ux", "graphic", "wireframe", "prototype",
+        "طراحی", "رابط کاربری", "تجربه کاربری", "گرافیک", "دیزاین",
+    ],
+    "qa_engineer": [
+        "test", "qa", "quality", "verification", "uat",
+        "تست", "آزمون", "کیفیت", "آزمایش", "اعتبارسنجی",
+    ],
+    "business_analyst": [
+        "requirement", "analysis", "specification", "discovery", "feasibility",
+        "نیازمندی", "تحلیل", "امکان سنجی", "شرح خدمات", "نیازسنجی", "نیاز سنجی",
+    ],
+    "devops_engineer": [
+        "deploy", "infrastructure", "server", "installation", "devops",
+        "استقرار", "زیرساخت", "سرور", "نصب", "راه اندازی", "دواپس",
+    ],
+    "security_engineer": [
+        "security", "penetration", "pentest", "audit", "hardening", "vulnerability",
+        "امنیت", "نفوذ", "ممیزی", "آسیب پذیری", "تست نفوذ",
+    ],
+    "project_manager": [
+        "management", "planning", "coordination", "reporting", "governance",
+        "مدیریت", "برنامه ریزی", "هماهنگی", "راهبری", "کنترل پروژه", "زمان بندی",
+    ],
+}
+
+# Titles that signal a legal/administrative clause rather than billable scope.
+# Note "تعهدات کارفرما" (the CLIENT's duties) is boilerplate, while
+# "تعهدات مجری/پیمانکار" (the VENDOR's duties) is real scope and is not listed.
+_BOILERPLATE_KEYWORDS = [
+    "confidential", "termination", "governing law", "force majeure", "signature",
+    "parties", "payment term", "payment schedule", "penalty", "dispute", "jurisdiction",
+    "طرفین قرارداد", "طرفین", "مبلغ قرارداد", "نحوه پرداخت", "شرایط پرداخت", "فسخ",
+    "محرمانگی", "حل اختلاف", "فورس ماژور", "قوه قاهره", "قانون حاکم", "امضا", "امضاء",
+    "نشانی", "اقامتگاه", "جریمه", "خسارت", "ضمانت نامه", "مدت قرارداد", "داوری", "تعهدات کارفرما",
+]
+
+_CATEGORY_WEIGHT = {
+    "development": 1.4, "design": 1.1, "testing": 1.0, "requirements": 0.9,
+    "deployment": 0.8, "support": 0.8, "project_management": 0.7, "training": 0.6,
+    "initiation": 0.5, "other": 0.7,
+}
+
+
+def _score(hay: str, keywords: list[str]) -> int:
+    return sum(hay.count(kw) for kw in keywords)
+
+
+def _haystack(title: str, body: str) -> str:
+    # Title counted twice so a section's heading outweighs incidental body words.
+    return _norm(f"{title} \n {title} \n {body[:600]}")
+
+
+def _categorize(title: str, body: str) -> str:
+    hay = _haystack(title, body)
+    best, best_score = "other", 0
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        score = _score(hay, keywords)
+        if score > best_score:
+            best, best_score = category, score
+    return best
+
+
+def _infer_role(title: str, body: str, roles: list[str]) -> str:
+    hay = _haystack(title, body)
+    best, best_score = None, 0
+    for role, keywords in ROLE_KEYWORDS.items():
+        if role not in roles:
             continue
-        words = len(body.split())
-        hours = max(4.0, round(words / 40, 1))  # rough: ~40 words of scoped text per person-hour
+        score = _score(hay, keywords)
+        if score > best_score:
+            best, best_score = role, score
+    return best or roles[0]
+
+
+def _is_boilerplate(title: str) -> bool:
+    hay = _norm(title)
+    return any(kw in hay for kw in _BOILERPLATE_KEYWORDS)
+
+
+def _estimate_hours(word_count: int, category: str) -> float:
+    weight = _CATEGORY_WEIGHT.get(category, 0.7)
+    hours = (word_count / 30.0) * weight  # ~30 words of scoped prose per person-hour
+    return round(min(240.0, max(4.0, hours)), 1)
+
+
+def _is_page_marker(title: str) -> bool:
+    return bool(re.match(r"^(page|صفحه|slide|sheet)\s*\d", _norm(title)))
+
+
+# Structure patterns, tried in order of specificity. Each yields (title, body).
+_MD_HEADING_RE = re.compile(r"^\s*#{1,4}\s+(.+?)\s*$", re.MULTILINE)
+_FA_CLAUSE_RE = re.compile(
+    r"^\s*((?:ماده|تبصره|بند|فصل|بخش|پیوست)\s*[\d۰-۹]+)\s*[:.\-–)]*\s*(.*)$",
+    re.MULTILINE,
+)
+_NUM_HEADING_RE = re.compile(
+    r"^\s*([\d۰-۹]+(?:[.\-][\d۰-۹]+)*)\s*[.\-)]\s+(.+?)\s*$", re.MULTILINE
+)
+
+
+def _md_title(m: "re.Match") -> str:
+    return (m.group(1) or "").strip()
+
+
+def _fa_clause_title(m: "re.Match") -> str:
+    marker, rest = m.group(1).strip(), (m.group(2) or "").strip()
+    return f"{marker} - {rest}" if rest else marker
+
+
+def _num_title(m: "re.Match") -> str:
+    return (m.group(2) or "").strip()
+
+
+_STRUCTURE_PATTERNS = [
+    (_MD_HEADING_RE, _md_title),
+    (_FA_CLAUSE_RE, _fa_clause_title),
+    (_NUM_HEADING_RE, _num_title),
+]
+
+
+def _boundary_chunks(text: str) -> list[tuple[str, str]]:
+    """Slice the document into (title, body) sections. Prefers explicit
+    structure (markdown headings, then Persian clause markers, then numbered
+    clauses); falls back to blank-line-separated paragraphs."""
+    for regex, title_of in _STRUCTURE_PATTERNS:
+        matches = [m for m in regex.finditer(text) if not _is_page_marker(title_of(m))]
+        if len(matches) >= 2:
+            chunks = []
+            for i, m in enumerate(matches):
+                body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+                chunks.append((title_of(m), text[m.end():body_end].strip()))
+            return chunks
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    return [(p.splitlines()[0].strip()[:90], p) for p in paragraphs]
+
+
+def split_sections_heuristic(text: str, coefficients: dict, language: str = "fa") -> list[dict]:
+    """Offline fallback used when no LLM is configured. Understands Persian and
+    English contract structure, classifies each section by keyword and produces
+    an editable person-hour estimate. Legal/administrative clauses are kept
+    visible but priced at zero effort."""
+    roles = _roles_from_coefficients(coefficients)
+    fallback_label = "بخش" if language == "fa" else "Section"
+    order = 0
+    sections = []
+    for title, body in _boundary_chunks(text):
+        title = (title or "").strip()
+        body = (body or "").strip()
+        if not title and not body:
+            continue
+        boilerplate = _is_boilerplate(title)
+        category = "other" if boilerplate else _categorize(title, body)
+        role = roles[0] if boilerplate else _infer_role(title, body, roles)
+        word_count = len(f"{title} {body}".split())
+        hours = 0.0 if boilerplate else _estimate_hours(word_count, category)
         sections.append({
-            "order_index": i,
-            "title": (title or f"Section {i + 1}")[:300],
-            "category": "other",
+            "order_index": order,
+            "title": (title or f"{fallback_label} {order + 1}")[:300],
+            "category": category,
             "role": role,
-            "excerpt": body[:280],
+            "excerpt": (body or title)[:280],
             "estimated_hours": hours,
         })
+        order += 1
+        if order >= 80:
+            break
     if not sections:
         raise AnalysisError("No sections could be identified in the document text.")
     return sections
