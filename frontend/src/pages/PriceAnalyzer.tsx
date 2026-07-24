@@ -114,7 +114,7 @@ export default function PriceAnalyzer() {
 function NewContractModal({ mode, onClose, onCreated }: { mode: "text" | "file"; onClose: () => void; onCreated: (id: number) => void }) {
   const [title, setTitle] = useState("");
   const [customer, setCustomer] = useState("");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState("fa");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -162,8 +162,8 @@ function NewContractModal({ mode, onClose, onCreated }: { mode: "text" | "file";
         <div>
           <label>Language</label>
           <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="en">English</option>
             <option value="fa">فارسی</option>
+            <option value="en">English</option>
           </select>
         </div>
       </div>

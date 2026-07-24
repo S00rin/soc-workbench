@@ -40,12 +40,74 @@ def db():
         yield session
 
 
-def test_heuristic_split_produces_editable_sections_without_any_llm():
+def test_heuristic_split_infers_category_and_role_per_section_without_any_llm():
     sections = pa.split_sections_heuristic(SAMPLE_CONTRACT, DEFAULT_COEFFICIENTS)
     assert len(sections) == 4
     assert {s["title"] for s in sections} == {"Requirements gathering", "Design", "Development", "Testing"}
     assert all(s["estimated_hours"] >= 4.0 for s in sections)
-    assert all(s["role"] == "project_manager" for s in sections)  # first configured role is the fallback
+    # Categories and disciplines are inferred from the content, not left uniform.
+    by_title = {s["title"]: s for s in sections}
+    assert by_title["Requirements gathering"]["category"] == "requirements"
+    assert by_title["Requirements gathering"]["role"] == "business_analyst"
+    assert by_title["Design"]["category"] == "design"
+    assert by_title["Design"]["role"] == "designer"
+    assert by_title["Development"]["category"] == "development"
+    assert by_title["Development"]["role"] == "developer"
+    assert by_title["Testing"]["category"] == "testing"
+    assert by_title["Testing"]["role"] == "qa_engineer"
+
+
+PERSIAN_CONTRACT = """ماده ۱ - موضوع قرارداد
+موضوع قرارداد طراحی و توسعه سامانه مدیریت مشتریان است.
+
+ماده ۲ - تحلیل و نیازسنجی
+مجری موظف است نیازمندی‌های کارفرما را بررسی و مستندسازی نماید.
+
+ماده ۳ - طراحی رابط کاربری
+طراحی رابط کاربری و تجربه کاربری تمامی صفحات سامانه.
+
+ماده ۴ - پیاده‌سازی و برنامه‌نویسی
+توسعه بک‌اند و فرانت‌اند سامانه با فناوری‌های مورد توافق.
+
+ماده ۵ - تست و کنترل کیفیت
+اجرای آزمون‌های نرم‌افزار و رفع اشکالات پیش از تحویل.
+
+ماده ۶ - نحوه پرداخت
+مبلغ قرارداد در سه قسط پرداخت خواهد شد.
+
+ماده ۷ - فسخ قرارداد
+در صورت تخلف هر یک از طرفین قرارداد قابل فسخ است.
+"""
+
+
+def test_heuristic_understands_persian_clauses_and_zeroes_legal_boilerplate():
+    sections = pa.split_sections_heuristic(PERSIAN_CONTRACT, DEFAULT_COEFFICIENTS, "fa")
+    # Each ماده becomes its own section.
+    assert len(sections) == 7
+    by_title = {s["title"]: s for s in sections}
+    # Scope clauses are categorized and priced.
+    reqs = next(s for s in sections if "نیازسنجی" in s["title"])
+    assert reqs["category"] == "requirements"
+    assert reqs["role"] == "business_analyst"
+    design = next(s for s in sections if "طراحی" in s["title"])
+    assert design["category"] == "design" and design["role"] == "designer"
+    dev = next(s for s in sections if "برنامه" in s["title"])
+    assert dev["category"] == "development" and dev["role"] == "developer"
+    test = next(s for s in sections if "تست" in s["title"])
+    assert test["category"] == "testing" and test["role"] == "qa_engineer"
+    # Payment and termination clauses are recognized as legal boilerplate: kept
+    # visible for review but priced at zero effort.
+    payment = next(s for s in sections if "پرداخت" in s["title"])
+    termination = next(s for s in sections if "فسخ" in s["title"])
+    assert payment["estimated_hours"] == 0.0
+    assert termination["estimated_hours"] == 0.0
+    assert payment["category"] == "other" and termination["category"] == "other"
+
+
+def test_norm_folds_zwnj_and_arabic_variants():
+    # ZWNJ-joined and Arabic-yeh/kaf spellings normalize to the same string.
+    assert pa._norm("برنامه‌نویسی") == pa._norm("برنامه نویسی")
+    assert pa._norm("رابط كاربري") == pa._norm("رابط کاربری")
 
 
 def test_heuristic_split_falls_back_to_paragraphs_without_headings():
@@ -57,6 +119,16 @@ def test_heuristic_split_falls_back_to_paragraphs_without_headings():
 def test_heuristic_split_rejects_empty_document():
     with pytest.raises(pa.AnalysisError):
         pa.split_sections_heuristic("   \n   ", DEFAULT_COEFFICIENTS)
+
+
+def test_default_coefficients_are_toman_and_deep_copied():
+    from app.models.price_analyzer import default_coefficients
+
+    a = default_coefficients()
+    b = default_coefficients()
+    assert a["currency"] == "تومان"
+    a["rates"]["developer"] = 1  # mutate one copy
+    assert b["rates"]["developer"] != 1  # the other is unaffected (deep copy)
 
 
 def test_compute_costs_applies_overhead_contingency_tax_and_discount():

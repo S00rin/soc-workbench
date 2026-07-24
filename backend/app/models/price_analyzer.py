@@ -2,30 +2,41 @@
 calculation, WBS/Gantt scheduling and RACI matrix (Module 17)."""
 from __future__ import annotations
 
+import copy
+
 from sqlalchemy import JSON, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
 from .base import TimestampMixin
 
+# Defaults target the Iranian market: Toman currency and per-hour rates in
+# Toman. All values are editable per contract from the UI, so these are just
+# sensible starting points, not fixed prices.
 DEFAULT_COEFFICIENTS = {
-    "currency": "USD",
+    "currency": "تومان",
     "hours_per_day": 8.0,
     "rates": {
-        "project_manager": 60.0,
-        "business_analyst": 45.0,
-        "developer": 50.0,
-        "qa_engineer": 40.0,
-        "designer": 45.0,
-        "devops_engineer": 55.0,
-        "security_engineer": 55.0,
-        "unassigned": 35.0,
+        "project_manager": 500000.0,
+        "business_analyst": 400000.0,
+        "developer": 450000.0,
+        "qa_engineer": 300000.0,
+        "designer": 400000.0,
+        "devops_engineer": 500000.0,
+        "security_engineer": 550000.0,
+        "unassigned": 250000.0,
     },
     "overhead_percent": 10.0,
     "contingency_percent": 10.0,
-    "tax_percent": 0.0,
+    "tax_percent": 9.0,
     "discount_percent": 0.0,
 }
+
+
+def default_coefficients() -> dict:
+    """A fresh deep copy so per-contract edits never leak into the shared
+    default (the nested ``rates`` dict must not be aliased across rows)."""
+    return copy.deepcopy(DEFAULT_COEFFICIENTS)
 
 
 class Contract(Base, TimestampMixin):
@@ -37,14 +48,14 @@ class Contract(Base, TimestampMixin):
     title: Mapped[str] = mapped_column(String(240), index=True)
     customer: Mapped[str] = mapped_column(String(200), default="")
     project_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    language: Mapped[str] = mapped_column(String(10), default="en")  # en | fa
+    language: Mapped[str] = mapped_column(String(10), default="fa")  # en | fa
     status: Mapped[str] = mapped_column(String(20), default="draft", index=True)  # draft|analyzed|finalized
     source_type: Mapped[str] = mapped_column(String(20), default="text")  # file | text
     source_ref: Mapped[str] = mapped_column(String(300), default="")
     stored_path: Mapped[str] = mapped_column(String(300), default="")
     source_text: Mapped[str] = mapped_column(Text, default="")
     summary: Mapped[str] = mapped_column(Text, default="")
-    coefficients: Mapped[dict] = mapped_column(JSON, default=lambda: dict(DEFAULT_COEFFICIENTS))
+    coefficients: Mapped[dict] = mapped_column(JSON, default=default_coefficients)
     schedule_start: Mapped[str] = mapped_column(String(30), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[str] = mapped_column(String(120), default="")

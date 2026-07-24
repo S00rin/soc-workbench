@@ -79,7 +79,7 @@ def _raci_out(row: RACIEntry) -> dict:
 class ContractTextIn(BaseModel):
     title: str = Field(min_length=1, max_length=240)
     customer: str = Field(default="", max_length=200)
-    language: str = Field(default="en", pattern="^(en|fa)$")
+    language: str = Field(default="fa", pattern="^(en|fa)$")
     project_id: int | None = None
     text: str = Field(min_length=1)
 
@@ -111,7 +111,7 @@ def create_contract_from_text(payload: ContractTextIn, db: Session = Depends(get
 @router.post("/contracts/upload")
 async def upload_contract(
     file: UploadFile = File(...), title: str = Form(""), customer: str = Form(""),
-    language: str = Form("en"), project_id: int | None = Form(None),
+    language: str = Form("fa"), project_id: int | None = Form(None),
     db: Session = Depends(get_db), user: str = Depends(get_current_user),
 ):
     app_settings.ensure_dirs()
@@ -198,15 +198,17 @@ def analyze_contract(contract_id: int, db: Session = Depends(get_db), user: str 
     coefficients = contract.coefficients or DEFAULT_COEFFICIENTS
 
     raw_sections: list[dict] | None = None
+    method = "heuristic"
     cfg = llm.config_from_settings(_llm_overrides(db))
     if cfg.has_credentials:
         try:
             raw_sections = pa.split_sections_with_llm(contract.source_text, contract.language, coefficients, cfg)
+            method = "ai"
         except (llm.LLMError, pa.AnalysisError) as e:
             logger.warning("LLM contract split failed, falling back to heuristic: %s", e)
     if raw_sections is None:
         try:
-            raw_sections = pa.split_sections_heuristic(contract.source_text, coefficients)
+            raw_sections = pa.split_sections_heuristic(contract.source_text, coefficients, contract.language)
         except pa.AnalysisError as e:
             raise HTTPException(422, str(e))
 
@@ -225,7 +227,7 @@ def analyze_contract(contract_id: int, db: Session = Depends(get_db), user: str 
     db.commit()
     for row in persisted:
         db.refresh(row)
-    return [_section_out(row) for row in persisted]
+    return {"method": method, "sections": [_section_out(row) for row in persisted]}
 
 
 # --- Sections -----------------------------------------------------------------

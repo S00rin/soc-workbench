@@ -19,7 +19,10 @@ into an editable, priced project plan:
    or removed by hand.
 4. **Price** — cost is computed from user-supplied coefficients stored per
    contract: an hourly rate per role, plus overhead %, contingency %, tax %
-   and discount %. Costs recompute live; nothing is ever invented.
+   and discount %. Costs recompute live; nothing is ever invented. Defaults
+   target the Iranian market — the currency defaults to **Toman (تومان)**
+   with Toman-scale hourly rates and a 9% VAT (`tax_percent`), and the module
+   defaults to **Farsi** — all editable per contract.
 5. **WBS & Gantt** — `Generate WBS & Gantt` builds a 3-level work breakdown
    structure (`1` Project → `1.1` Phase → `1.1.1` Task, where phases are the
    section categories present and tasks are the sections themselves) and
@@ -58,8 +61,25 @@ producing broken text. Excel export has no such requirement.
 
 ## No LLM configured?
 
-The `Analyze contract` action still works: `split_sections_heuristic` in
-`app/services/price_analyzer.py` splits on markdown headings (or, if none
-are present, on blank-line-separated paragraphs) and applies a rough
-word-count-based hour estimate. It is intentionally conservative — treat it
-as a first draft to edit, not a final estimate.
+The `Analyze contract` action still works without any AI provider.
+`split_sections_heuristic` in `app/services/price_analyzer.py` does real
+structural analysis rather than a naive split:
+
+- **Structure detection** — it recognizes Persian contract structure
+  (`ماده`, `تبصره`, `بند`, `فصل`) and numbered clauses, falling back to
+  markdown headings and then blank-line paragraphs.
+- **Bilingual classification** — each section is categorized (requirements,
+  design, development, testing, …) and assigned a discipline/role from
+  Persian + English keyword tables, with text normalization that folds the
+  zero-width non-joiner and Arabic yeh/kaf so matching is robust.
+- **Boilerplate handling** — purely legal/administrative clauses (payment,
+  termination, confidentiality, parties, …) are kept visible but priced at
+  zero effort so they don't inflate the estimate. Note that vendor-side
+  obligations (`تعهدات مجری/پیمانکار`) are treated as real scope, only the
+  client-side `تعهدات کارفرما` is boilerplate.
+
+It is still a first draft to edit, not a final estimate — and the UI shows a
+hint after an offline analysis pointing to Settings → LLM for sharper
+extraction. When an LLM *is* configured, the same keyword inference repairs
+any category/role the model omits or mislabels, and the response's `method`
+field (`ai` vs `heuristic`) tells the UI which path ran.
