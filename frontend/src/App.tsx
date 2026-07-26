@@ -20,6 +20,7 @@ import AboutSorin from "./pages/AboutSorin";
 import PasswordChange from "./pages/PasswordChange";
 import PriceAnalyzer from "./pages/PriceAnalyzer";
 import Help from "./pages/Help";
+import SensorLibrary from "./pages/SensorLibrary";
 
 type AuthState = "checking" | "in" | "out";
 
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/intelligence" element={<Allowed module="intelligence"><IntelligenceHub /></Allowed>} />
         <Route path="/reports" element={<Allowed module="reports"><Reports /></Allowed>} />
         <Route path="/price-analyzer" element={<Allowed module="price_analyzer"><PriceAnalyzer /></Allowed>} />
+        <Route path="/sensors" element={<Allowed module="sensors"><SensorLibrary /></Allowed>} />
         <Route path="/operations" element={<Allowed module="operations"><OperationsHub /></Allowed>} />
         <Route path="/prompts" element={<Allowed module="prompts"><Prompts /></Allowed>} />
         <Route path="/settings" element={<Allowed module="settings"><Settings /></Allowed>} />

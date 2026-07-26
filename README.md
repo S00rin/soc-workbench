@@ -46,6 +46,13 @@ an SQLite backing store.
 - **Attack Simulation Lab** — classroom profiles for Windows, Linux, web, and
   network behaviors with safe synthetic telemetry, MITRE ATT&CK mapping,
   Splunk detections, and analyst triage guidance.
+- **Equipment & Sensor Library** — a catalog of the SOC's devices and sensors
+  with capabilities, log sources (sample events, SIEM sourcetype/index, EPS,
+  retention, MITRE data sources), log-collection guides, runbooks and
+  playbooks. Bilingual (English/Farsi), searchable, exportable to Markdown/JSON,
+  and one-click **publish to Confluence** through an existing Atlassian
+  connection. Ships with reference profiles (Palo Alto NGFW, Windows Security,
+  Microsoft Defender for Endpoint, Zeek).
 
 ## Tech stack
 
@@ -159,6 +166,9 @@ for user roles, feature expiry, Wiki.js API setup, deployment and rollback.
 
 See [Price Analyzer](docs/PRICE_ANALYZER.md) for the contract analysis,
 WBS/Gantt/RACI and cost estimation workflow.
+
+See [Equipment & Sensor Library](docs/EQUIPMENT_SENSORS.md) for the sensor
+catalog, log-source documentation, runbooks/playbooks and Confluence publishing.
 
 ## Data & storage
 

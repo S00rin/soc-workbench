@@ -13,6 +13,7 @@ from .governance import (
 )
 from .help import HelpGuide
 from .price_analyzer import Contract, ContractSection, RACIEntry, WBSItem
+from .sensors import Sensor, SensorDocument, SensorLogSource
 
 __all__ = [
     "Setting", "Job", "SensitivePattern", "TokenMapping", "Document",
@@ -26,4 +27,5 @@ __all__ = [
     "IntegrationChatSession", "IntegrationChatTurn", "UserActivity",
     "HelpGuide",
     "Contract", "ContractSection", "WBSItem", "RACIEntry",
+    "Sensor", "SensorLogSource", "SensorDocument",
 ]
