@@ -131,7 +131,7 @@ export default function AttackScenario() {
             <div className="card-head"><h3>Detection SPL</h3><button className="btn-sm" onClick={() => copy(scenario.spl, "SPL")}>Copy</button></div>
             <pre className="spl-code">{scenario.spl}</pre>
             <div className="row mt">
-              <Link className="btn btn-primary btn-sm" to={`/splunk?spl=${encodeURIComponent(scenario.spl)}`}>Open in Splunk search</Link>
+              <Link className="btn btn-primary btn-sm" to={`/integrations?tab=splunk&spl=${encodeURIComponent(scenario.spl)}`}>Open in Splunk search</Link>
             </div>
           </section>
           <section className="card">

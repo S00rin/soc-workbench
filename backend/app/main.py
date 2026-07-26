@@ -15,10 +15,12 @@ from .config import get_settings
 from .database import SessionLocal, init_db
 from .jobs.scheduler import shutdown_scheduler, start_scheduler
 from .logging_config import get_logger, setup_logging
+from .services.access_middleware import ProductAccessMiddleware
 from .routers import (
-    attack_lab, automation, intel, jira, llm, notifications, prompts, reports, search, splunk,
+    atlassian, attack_lab, automation, governance, help, integration_chat, intel, jira, llm, notifications,
+    price_analyzer, prompts, reports, search, splunk, wikijs,
 )
-from .services import intelligence_automation, settings_service
+from .services import access_control, atlassian_connections, help_guides, intelligence_automation, settings_service
 
 setup_logging()
 logger = get_logger(__name__)
@@ -32,7 +34,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         settings_service.seed_defaults(db)
+        access_control.seed_access_defaults(db)
+        atlassian_connections.seed_legacy_jira_connection(db)
         intelligence_automation.seed_default_sources(db)
+        help_guides.seed_default_guides(db)
     finally:
         db.close()
     start_scheduler()
@@ -42,7 +47,7 @@ async def lifespan(app: FastAPI):
     logger.info("%s shutting down", app_settings.app_name)
 
 
-app = FastAPI(title=app_settings.app_name, version="0.2.0", lifespan=lifespan)
+app = FastAPI(title=app_settings.app_name, version="0.3.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_settings.cors_origin_list,
@@ -50,18 +55,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ProductAccessMiddleware)
 
 for module in (
     auth, settings_api, dashboard, documents, knowledge, iocs, projects, jobs,
-    jira, splunk, intel, reports, notifications, prompts, llm, search, automation,
-    attack_lab,
+    jira, atlassian, governance, wikijs, integration_chat, splunk, intel, reports, notifications, prompts,
+    llm, search, automation, price_analyzer, help, attack_lab,
 ):
     app.include_router(module.router)
 
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "app": app_settings.app_name, "version": "0.2.0"}
+    return {"status": "ok", "app": app_settings.app_name, "version": "0.3.0"}
 
 
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

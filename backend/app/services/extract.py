@@ -19,7 +19,95 @@ class ExtractionError(Exception):
     pass
 
 
-def _from_pdf(path: Path) -> str:
+# Default OCR languages: Persian + English (the primary audience). Tesseract
+# language packs must be installed for these codes (fas, eng).
+DEFAULT_OCR_LANGS = "fas+eng"
+
+
+def _ocr_ready() -> tuple[bool, str]:
+    """Return (available, reason). OCR needs the Python bindings plus the
+    Tesseract engine binary; report a precise, actionable reason when not."""
+    try:
+        import pytesseract  # noqa: F401
+        import pypdfium2  # noqa: F401
+        from PIL import Image  # noqa: F401
+    except ImportError as e:
+        return False, (
+            f"OCR support is not installed ({e}). Add pytesseract, pypdfium2 and "
+            "Pillow to the backend environment."
+        )
+    try:
+        import pytesseract
+        pytesseract.get_tesseract_version()
+    except Exception:  # noqa: BLE001 - any failure means the engine is unusable
+        return False, (
+            "The Tesseract OCR engine is not installed on the server. Install it, "
+            "e.g. `apt-get install tesseract-ocr tesseract-ocr-fas tesseract-ocr-eng "
+            "poppler-utils`, then retry."
+        )
+    return True, ""
+
+
+def _clean_ocr_text(text: str) -> str:
+    """Tidy raw OCR output: drop empty lines and trailing whitespace so the
+    stored text reads cleanly instead of arriving garbled."""
+    lines = [line.strip() for line in (text or "").splitlines()]
+    return "\n".join(line for line in lines if line).strip()
+
+
+def _ocr_image_obj(image, langs: str) -> str:
+    import pytesseract
+
+    return _clean_ocr_text(pytesseract.image_to_string(image, lang=langs))
+
+
+def _from_image(path: Path, langs: str = DEFAULT_OCR_LANGS) -> str:
+    ready, reason = _ocr_ready()
+    if not ready:
+        raise ExtractionError(reason)
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    try:
+        with Image.open(str(path)) as image:
+            # EXIF-orient and grayscale for steadier recognition.
+            prepared = ImageOps.grayscale(ImageOps.exif_transpose(image))
+            text = _ocr_image_obj(prepared, langs)
+    except UnidentifiedImageError as e:
+        raise ExtractionError(f"Could not read image {path.name}: {e}") from e
+    if not text:
+        raise ExtractionError(
+            "OCR found no readable text in the image. Check the scan quality and "
+            "that the correct Tesseract language packs are installed."
+        )
+    return text
+
+
+def _ocr_pdf(path: Path, langs: str = DEFAULT_OCR_LANGS) -> str:
+    """Rasterize each PDF page and OCR it — for scanned PDFs with no text layer."""
+    ready, reason = _ocr_ready()
+    if not ready:
+        raise ExtractionError(reason)
+    import pypdfium2 as pdfium
+
+    parts: list[str] = []
+    pdf = pdfium.PdfDocument(str(path))
+    try:
+        for i in range(len(pdf)):
+            page = pdf[i]
+            # ~180 DPI: a good accuracy/speed trade-off for OCR.
+            bitmap = page.render(scale=2.5)
+            image = bitmap.to_pil()
+            text = _ocr_image_obj(image, langs)
+            if text:
+                parts.append(f"\n\n## Page {i + 1}\n\n{text}")
+    finally:
+        pdf.close()
+    if not parts:
+        raise ExtractionError("OCR found no readable text in the scanned PDF.")
+    return "".join(parts).strip()
+
+
+def _from_pdf(path: Path, langs: str = DEFAULT_OCR_LANGS) -> str:
     try:
         from pypdf import PdfReader
     except ImportError as e:  # pragma: no cover
@@ -30,11 +118,17 @@ def _from_pdf(path: Path) -> str:
         text = page.extract_text() or ""
         if text.strip():
             parts.append(f"\n\n## Page {i}\n\n{text.strip()}")
-    if not parts:
-        raise ExtractionError(
-            "No extractable text in PDF (it may be scanned images; OCR not enabled)."
-        )
-    return "".join(parts).strip()
+    combined = "".join(parts).strip()
+    # A scanned PDF has no (or a negligible) text layer — fall back to OCR so
+    # image-only Persian/English PDFs still produce clean, usable text.
+    if len(combined) < 40:
+        try:
+            return _ocr_pdf(path, langs)
+        except ExtractionError:
+            if combined:
+                return combined  # keep whatever sparse text we did find
+            raise
+    return combined
 
 
 def _from_docx(path: Path) -> str:
@@ -150,11 +244,21 @@ EXT_MAP = {
     ".markdown": "text",
     ".txt": "text",
     ".log": "text",
+    # Images go through OCR.
+    ".png": "image",
+    ".jpg": "image",
+    ".jpeg": "image",
+    ".tif": "image",
+    ".tiff": "image",
+    ".bmp": "image",
+    ".webp": "image",
+    ".gif": "image",
 }
 
 
-def extract_file(path: Path) -> str:
-    """Extract markdown-ish text from a file on disk."""
+def extract_file(path: Path, ocr_langs: str = DEFAULT_OCR_LANGS) -> str:
+    """Extract markdown-ish text from a file on disk. Scanned PDFs and image
+    files are read with OCR (Tesseract) using `ocr_langs` (default fas+eng)."""
     ext = path.suffix.lower()
     kind = EXT_MAP.get(ext)
     if kind is None:
@@ -162,7 +266,9 @@ def extract_file(path: Path) -> str:
         kind = "text"
     try:
         if kind == "pdf":
-            return _from_pdf(path)
+            return _from_pdf(path, ocr_langs)
+        if kind == "image":
+            return _from_image(path, ocr_langs)
         if kind == "docx":
             return _from_docx(path)
         if kind == "xlsx":

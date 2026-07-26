@@ -5,22 +5,42 @@ and feeds, extracts and tokenizes indicators, organizes investigations into
 projects, and runs LLM-assisted analysis — all from a single local process with
 an SQLite backing store.
 
-> ⚠️ **Single-user, self-hosted tool.** It ships with insecure defaults for
-> local development. Read [SECURITY.md](SECURITY.md) before exposing it on any
-> network.
+> ⚠️ **Self-hosted security tool.** It ships with development defaults. Change
+> `ADMIN_PASSWORD` and `SECRET_KEY`, configure TLS, and read
+> [SECURITY.md](SECURITY.md) before exposing it on any network.
 
 ## Features
 
 - **Input processing** — extract text from PDF, DOCX, XLSX, PPTX, HTML, and
-  Markdown, with automatic sensitive-data tokenization.
+  Markdown, with automatic sensitive-data tokenization. Scanned PDFs and image
+  files (PNG/JPG/TIFF/…) are read with OCR (Persian + English).
 - **Knowledge base** — store and search extracted content and analyst notes.
 - **IoCs** — track indicators of compromise across investigations.
 - **Projects** — group documents, indicators, and findings per investigation.
 - **Internet intelligence** — pull and normalize RSS/Atom threat feeds.
 - **Reports** — assemble and export Markdown/HTML reports.
-- **Integrations** — Jira (ticketing) and Splunk (search) connectors.
+- **Price Analyzer** — turn a Persian or English contract/SOW into an
+  editable person-hour estimate and cost breakdown (user-defined hourly
+  rates, overhead/contingency/tax/discount), a 3-level WBS with a Gantt
+  schedule, and an editable RACI matrix, exportable to PDF/Excel and linked
+  to Projects, Reports and the knowledge base. Accepts scanned/image
+  contracts via OCR and defaults to Toman/Farsi.
+- **Help guides** — built-in English/Farsi user and admin help guides,
+  editable by admins.
+- **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
+  dynamic Jira field mapping, permission tests, redacted query history, smart
+  comment approval, and controlled bulk jobs.
+- **Unified integration chat** — ask Jira, Confluence, Wiki.js and Splunk in
+  natural language, edit the generated read-only query, continue with follow-up
+  prompts, and reopen the redacted conversation history.
+- **Wiki.js** — encrypted API-token connections, GraphQL permission tests, page
+  search and prompt-based analysis.
+- **Product governance** — multiple local users, module RBAC, activity history,
+  and admin-controlled feature start/expiry windows.
 - **LLM assistance** — Anthropic (Claude) and optional OpenAI-compatible
-  endpoints, with a reusable prompt library and request history.
+  endpoints, with a reusable prompt library and request history. No API key?
+  Use the `claude_cli` (Claude Code) or `codex_cli` (ChatGPT Codex) provider to
+  run analysis through a local CLI agent with your existing subscription.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
 - **Notifications** — in-app notification feed for job and system events.
 - **Attack Simulation Lab** — classroom profiles for Windows, Linux, web, and
@@ -34,8 +54,9 @@ an SQLite backing store.
 | Backend   | Python 3.12+, FastAPI, SQLAlchemy 2, APScheduler        |
 | Database  | SQLite (file-based, under `data/`)                      |
 | Frontend  | React 18, TypeScript, Vite, React Router               |
-| LLM       | `anthropic` SDK; optional OpenAI-compatible endpoint    |
-| Auth      | JWT (single local user); secrets encrypted at rest      |
+| LLM       | `anthropic` SDK; OpenAI-compatible endpoint; or local `claude`/`codex` CLI (no API key) |
+| OCR       | Tesseract (`fas`+`eng`) via pytesseract + pypdfium2 (optional)   |
+| Auth      | JWT with database users, module RBAC and encrypted secrets |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper walkthrough.
 
@@ -67,6 +88,18 @@ uvicorn app.main:app --reload --port 8000
 The API is served under `http://127.0.0.1:8000/api`. Health check:
 `GET /api/health`.
 
+**Optional — OCR for scanned PDFs and images.** Text-based files work out of
+the box. To read scanned/image documents you also need the Tesseract engine
+and language packs installed on the host:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install tesseract-ocr tesseract-ocr-fas tesseract-ocr-eng poppler-utils
+```
+
+Without it, text-based extraction still works and image/scanned input returns
+a clear "install Tesseract" message instead of failing silently.
+
 ### 3. Frontend
 
 ```bash
@@ -75,7 +108,9 @@ npm install
 npm run dev        # dev server at http://localhost:5173 (proxies /api -> :8000)
 ```
 
-Log in with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` from your `.env`.
+On the first upgraded start, the initial admin account is seeded from
+`ADMIN_USERNAME` / `ADMIN_PASSWORD`. Create additional users and module access
+rules under **Access & Features**.
 
 ### Single-process (production-style)
 
@@ -105,12 +140,25 @@ runtime in the **Settings** UI and are stored in the database. Key variables:
 
 | Variable                 | Purpose                                             |
 |--------------------------|-----------------------------------------------------|
-| `ADMIN_USERNAME/PASSWORD`| Single-user login credentials                       |
+| `ADMIN_USERNAME/PASSWORD`| Initial administrator credentials (first seed)      |
 | `SECRET_KEY`             | Signs JWTs **and** encrypts stored secrets — set it |
 | `DATA_DIR`               | Where SQLite DB, uploads, reports, backups live     |
 | `CORS_ORIGINS`           | Allowed frontend origins (comma-separated)          |
 | `ANTHROPIC_API_KEY`      | Claude API key (optional; also settable in UI)      |
 | `OPENAI_BASE_URL/KEY`    | Optional OpenAI-compatible endpoint                 |
+| `ATLASSIAN_OAUTH_*`      | Optional Jira/Confluence Cloud OAuth 2.0 (3LO) app  |
+| `ATLASSIAN_BULK_MAX_ISSUES` | Hard ceiling for one bulk comment job            |
+| `ATLASSIAN_HISTORY_RETENTION_DAYS` | Default history retention policy        |
+
+See [Atlassian integration setup](docs/ATLASSIAN_INTEGRATION.md) for Jira
+Cloud/Data Center, Confluence, OAuth scopes, migration, deployment, and
+rollback instructions.
+
+See [Product governance, prompt chat and Wiki.js](docs/PRODUCT_GOVERNANCE_AND_WIKIJS.md)
+for user roles, feature expiry, Wiki.js API setup, deployment and rollback.
+
+See [Price Analyzer](docs/PRICE_ANALYZER.md) for the contract analysis,
+WBS/Gantt/RACI and cost estimation workflow.
 
 ## Data & storage
 
@@ -132,6 +180,11 @@ data/
 ```bash
 cd backend
 pytest
+
+cd ../frontend
+npm run typecheck
+npm test
+npm run build
 ```
 
 ## Project layout

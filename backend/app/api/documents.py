@@ -41,6 +41,7 @@ LLM_KEYS = (
     "llm_timeout",
     "llm_api_key",
     "claude_cli_path",
+    "codex_cli_path",
 )
 
 

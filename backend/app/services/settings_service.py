@@ -24,14 +24,22 @@ SECRET_KEYS = {
 
 DEFAULTS = {
     # LLM
-    "llm_provider": ("anthropic", "llm"),  # anthropic | openai | claude_cli
+    "llm_provider": ("anthropic", "llm"),  # anthropic | openai | claude_cli | codex_cli
     "llm_model": ("claude-opus-4-8", "llm"),
-    "llm_api_key": ("", "llm"),  # secret (not needed for claude_cli)
+    "llm_api_key": ("", "llm"),  # secret (not needed for claude_cli / codex_cli)
     "claude_cli_path": ("", "llm"),  # optional path to `claude`; blank = search PATH
+    "codex_cli_path": ("", "llm"),  # optional path to `codex`; blank = search PATH
     "llm_max_tokens": ("4096", "llm"),
     "llm_temperature": ("0.3", "llm"),
     "llm_timeout": ("120", "llm"),
     "llm_base_url": ("", "llm"),
+    # Atlassian safety policies
+    "atlassian_history_retention_days": ("90", "atlassian"),
+    "atlassian_bulk_max_issues": ("100", "atlassian"),
+    "atlassian_block_closed_issues": ("true", "atlassian"),
+    "atlassian_block_restricted_issues": ("true", "atlassian"),
+    "atlassian_auto_post_enabled": ("false", "atlassian"),
+    "atlassian_bulk_auto_post_enabled": ("false", "atlassian"),
     "default_language": ("en", "general"),
     # Jira
     "jira_base_url": ("", "jira"),

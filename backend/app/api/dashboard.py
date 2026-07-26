@@ -1,6 +1,8 @@
 """Main dashboard aggregation (Module 1)."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -8,14 +10,17 @@ from ..database import get_db
 from ..models.content import Document, IntelItem, KnowledgeItem
 from ..models.core import Job
 from ..models.entities import IoC, Project, Report
+from ..models.atlassian import AtlassianConnection
+from ..models.governance import ExternalConnection, FeaturePolicy, IntegrationChatSession, UserAccount, UserActivity
 from ..schemas import DashboardOut
-from ..security import get_current_user
+from ..security import AuthContext, get_auth_context
+from ..services.access_control import policy_state
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("", response_model=DashboardOut)
-def dashboard(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+def dashboard(db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
     counts = {
         "projects": db.query(Project).count(),
         "documents": db.query(Document).count(),
@@ -25,6 +30,7 @@ def dashboard(db: Session = Depends(get_db), _: str = Depends(get_current_user))
         "intel": db.query(IntelItem).count(),
         "jobs_failed": db.query(Job).filter(Job.status == "failed").count(),
         "jobs_running": db.query(Job).filter(Job.status.in_(["running", "pending"])).count(),
+        "active_projects": db.query(Project).filter(Project.status == "active").count(),
     }
 
     active_projects = [
@@ -65,6 +71,49 @@ def dashboard(db: Session = Depends(get_db), _: str = Depends(get_current_user))
         for j in db.query(Job).order_by(Job.created_at.desc()).limit(8)
     ]
 
+    atlassian_rows = db.query(AtlassianConnection).filter(AtlassianConnection.tenant_id == context.tenant_id).all()
+    external_rows = db.query(ExternalConnection).filter(ExternalConnection.tenant_id == context.tenant_id).all()
+    connectors = [*atlassian_rows, *external_rows]
+    integration_health = {
+        "total": len(connectors),
+        "connected": sum(1 for row in connectors if row.enabled and row.last_success_at and not row.last_error_code),
+        "attention": sum(1 for row in connectors if row.last_error_code or not row.enabled),
+        "chats": db.query(IntegrationChatSession).filter(
+            IntegrationChatSession.tenant_id == context.tenant_id,
+            IntegrationChatSession.status != "deleted",
+        ).count(),
+        "items": [
+            {"name": row.name, "provider": "atlassian" if isinstance(row, AtlassianConnection) else row.provider,
+             "enabled": row.enabled, "last_success_at": row.last_success_at,
+             "error_code": row.last_error_code, "error_summary": row.last_error_summary}
+            for row in connectors[:8]
+        ],
+    }
+    now = datetime.now(timezone.utc)
+    policies = db.query(FeaturePolicy).filter(FeaturePolicy.tenant_id == context.tenant_id).all()
+    feature_states = [(row, policy_state(row, now=now)) for row in policies]
+    feature_health = {
+        "active": sum(1 for _, state in feature_states if state["active"]),
+        "unavailable": sum(1 for _, state in feature_states if not state["active"]),
+        "expiring_soon": [
+            {"key": row.feature_key, "expires_at": row.expires_at}
+            for row, state in feature_states
+            if state["active"] and row.expires_at and now < (row.expires_at if row.expires_at.tzinfo else row.expires_at.replace(tzinfo=timezone.utc)) <= now + timedelta(days=30)
+        ],
+    }
+    user_summary = {
+        "total": db.query(UserAccount).filter(UserAccount.tenant_id == context.tenant_id).count(),
+        "active": db.query(UserAccount).filter(UserAccount.tenant_id == context.tenant_id, UserAccount.active.is_(True)).count(),
+    }
+    activity_query = db.query(UserActivity).filter(UserActivity.tenant_id == context.tenant_id)
+    if context.role != "admin":
+        activity_query = activity_query.filter(UserActivity.actor_user_id == context.username)
+    recent_activity = [
+        {"id": row.id, "actor": row.actor_user_id, "module": row.module_key, "action": row.action,
+         "status_code": row.status_code, "duration_ms": row.duration_ms, "created_at": row.created_at}
+        for row in activity_query.order_by(UserActivity.created_at.desc()).limit(10).all()
+    ]
+
     return DashboardOut(
         counts=counts,
         active_projects=active_projects,
@@ -74,4 +123,8 @@ def dashboard(db: Session = Depends(get_db), _: str = Depends(get_current_user))
         recent_reports=recent_reports,
         failed_jobs=failed_jobs,
         recent_jobs=recent_jobs,
+        integration_health=integration_health,
+        feature_health=feature_health,
+        user_summary=user_summary,
+        recent_activity=recent_activity,
     )

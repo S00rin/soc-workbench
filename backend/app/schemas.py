@@ -21,6 +21,11 @@ class Token(BaseModel):
 
 class UserOut(BaseModel):
     username: str
+    tenant_id: str = "default"
+    role: str = "admin"
+    display_name: str = ""
+    module_permissions: list[str] = Field(default_factory=list)
+    must_change_password: bool = False
 
 
 # --- Settings -------------------------------------------------------------
@@ -290,3 +295,7 @@ class DashboardOut(BaseModel):
     recent_reports: list
     failed_jobs: list
     recent_jobs: list
+    integration_health: dict = Field(default_factory=dict)
+    feature_health: dict = Field(default_factory=dict)
+    user_summary: dict = Field(default_factory=dict)
+    recent_activity: list = Field(default_factory=list)

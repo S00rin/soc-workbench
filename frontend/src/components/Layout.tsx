@@ -1,52 +1,74 @@
 import { ReactNode, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { hasFeature, hasModule, useAccess } from "../access";
 
-const NAV = [
+type NavItem = { to: string; icon: string; label: string; module?: string; feature?: string; admin?: boolean };
+const NAV: { group: string; items: NavItem[] }[] = [
+  { group: "Overview", items: [{ to: "/", icon: "01", label: "Dashboard", module: "dashboard" }] },
   { group: "Workspace", items: [
-    { to: "/", icon: "▚", label: "Dashboard" },
-    { to: "/process", icon: "⇪", label: "Input & Processing" },
-    { to: "/knowledge", icon: "❏", label: "Knowledge Base" },
-    { to: "/iocs", icon: "⌖", label: "IoCs" },
-    { to: "/projects", icon: "◈", label: "Projects" },
-    { to: "/jobs", icon: "⚙", label: "Jobs" },
-  ]},
-  { group: "Integrations", items: [
-    { to: "/jira", icon: "◔", label: "Jira" },
-    { to: "/splunk", icon: "◱", label: "Splunk & MCP" },
-    { to: "/intel", icon: "◎", label: "Internet Intel" },
-    { to: "/automation", icon: "↻", label: "Automation" },
-    { to: "/reports", icon: "▤", label: "Reports" },
-    { to: "/notifications", icon: "✉", label: "Notifications" },
-    { to: "/prompts", icon: "❯", label: "Prompt Library" },
-  ]},
+    { to: "/data", icon: "02", label: "Data & IoCs", module: "data" },
+    { to: "/integrations", icon: "03", label: "Integration Hub", module: "integrations" },
+    { to: "/intelligence", icon: "04", label: "Intelligence", module: "intelligence" },
+    { to: "/reports", icon: "05", label: "Reports", module: "reports" },
+    { to: "/price-analyzer", icon: "06", label: "Price Analyzer", module: "price_analyzer" },
+  ] },
+  { group: "Manage", items: [
+    { to: "/operations", icon: "07", label: "Operations", module: "operations" },
+    { to: "/prompts", icon: "08", label: "Prompt Library", module: "prompts" },
+    { to: "/admin/access", icon: "09", label: "Access & Features", admin: true },
+    { to: "/settings", icon: "10", label: "Settings", module: "settings" },
+    { to: "/help", icon: "?", label: "Help Guides" },
+  ] },
   { group: "Training", items: [
-    { to: "/attack-lab", icon: "⌁", label: "Attack Simulation Lab" },
-  ]},
-  { group: "System", items: [{ to: "/settings", icon: "⚙", label: "Settings" }]},
+    { to: "/attack-lab", icon: "11", label: "Attack Simulation Lab" },
+  ] },
+  { group: "Soorin", items: [{ to: "/about-sorin", icon: "S", label: "معرفی سورین" }] },
 ];
-const TITLES: Record<string,string> = {
-  "/":"Dashboard", "/process":"Input & Data Processing", "/knowledge":"SOC Knowledge Base",
-  "/iocs":"IoC Repository", "/projects":"Projects", "/jobs":"Background Jobs",
-  "/jira":"Jira", "/splunk":"Splunk & MCP", "/intel":"Internet Intelligence",
-  "/automation":"Intelligence & Claude Automation", "/reports":"Reports",
-  "/notifications":"Notifications", "/prompts":"Prompt Library", "/settings":"Settings",
-  "/attack-lab":"Attack Simulation Lab",
+
+const TITLES: Record<string, string> = {
+  "/": "Dashboard", "/data": "Data & IoCs", "/integrations": "Integration Hub",
+  "/intelligence": "Intelligence", "/reports": "Reports", "/price-analyzer": "Price Analyzer",
+  "/operations": "Operations", "/prompts": "Prompt Library", "/settings": "Settings",
+  "/admin/access": "Access & Feature Control", "/help": "Help Guides",
+  "/about-sorin": "معرفی سورین", "/attack-lab": "Attack Simulation Lab",
 };
+
 export default function Layout({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
-  const [open,setOpen]=useState(false); const loc=useLocation();
+  const [open, setOpen] = useState(false);
+  const loc = useLocation();
+  const access = useAccess();
+  const title = TITLES[loc.pathname] || (loc.pathname.startsWith("/attack-lab/") ? "Attack Scenario" : "Soorin SOC Workbench");
+  const visibleGroups = NAV.map(group => ({
+    ...group,
+    items: group.items.filter(item =>
+      (!item.admin || access.user.role === "admin") &&
+      (!item.module || hasModule(access, item.module)) &&
+      (!item.feature || hasFeature(access, item.feature))
+    ),
+  })).filter(group => group.items.length > 0);
+
   return <div className="app">
-    <aside className={`sidebar ${open ? "open" : ""}`} onClick={()=>setOpen(false)}>
-      <div className="brand"><span className="logo">◆</span> SOC Workbench</div>
-      {NAV.map(g=><div key={g.group}><div className="nav-group-label">{g.group}</div>
-        {g.items.map(it=><NavLink key={it.to} to={it.to} end={it.to==="/"}
-          className={({isActive})=>`nav-item ${isActive ? "active" : ""}`}>
-          <span className="ic">{it.icon}</span><span>{it.label}</span></NavLink>)}</div>)}
+    {open && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setOpen(false)} />}
+    <aside className={`sidebar ${open ? "open" : ""}`}>
+      <div className="brand">
+        <img src="/brand/soorin-mark.png" alt="Soorin logo" />
+        <div><b>Soorin</b><span>SOC Workbench</span></div>
+      </div>
+      <nav>{visibleGroups.map(group => <div key={group.group}><div className="nav-group-label">{group.group}</div>
+        {group.items.map(item => <NavLink key={item.to} to={item.to} end={item.to === "/"} onClick={() => setOpen(false)}
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+          <span className="ic">{item.icon}</span><span>{item.label}</span>
+        </NavLink>)}</div>)}</nav>
+      <div className="sidebar-foot"><span className="brand-dot" /> Secure workspace</div>
     </aside>
-    <div className="main"><header className="topbar"><div className="row">
-      <button className="btn-ghost btn-sm" onClick={()=>setOpen(o=>!o)} style={{display:"none"}} id="menuBtn">☰</button>
-      <span className="title">{TITLES[loc.pathname] || (loc.pathname.startsWith("/attack-lab/") ? "Attack Scenario" : "SOC Workbench")}</span></div>
-      <div className="row"><span className="dim" style={{fontSize:12.5}}>admin</span>
-      <button className="btn-sm btn-ghost" onClick={onLogout}>Sign out</button></div></header>
-      <main className="content">{children}</main></div>
+    <div className="main">
+      <header className="topbar"><div className="row">
+        <button className="btn-ghost btn-sm menu-btn" onClick={() => setOpen(value => !value)} aria-label="Open navigation">☰</button>
+        <span className="title">{title}</span></div>
+        <div className="row user-menu"><div className="user-avatar">{(access.user.display_name || access.user.username).slice(0, 1).toUpperCase()}</div><div className="user-meta"><b>{access.user.display_name || access.user.username}</b><span>{access.user.role}</span></div>
+          <button className="btn-sm btn-ghost" onClick={onLogout}>Sign out</button></div>
+      </header>
+      <main className="content">{children}</main>
+    </div>
   </div>;
 }

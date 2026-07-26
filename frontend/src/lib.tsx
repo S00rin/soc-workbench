@@ -11,7 +11,7 @@ export function isRTL(text: string): boolean {
 }
 
 export function Markdown({ text }: { text: string }) {
-  const html = marked.parse(text || "", { async: false }) as string;
+  const html = sanitizeHtml(marked.parse(text || "", { async: false }) as string);
   return (
     <div
       className="md"
@@ -19,6 +19,34 @@ export function Markdown({ text }: { text: string }) {
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
+}
+
+const SAFE_TAGS = new Set([
+  "A", "P", "BR", "STRONG", "EM", "B", "I", "UL", "OL", "LI", "BLOCKQUOTE",
+  "CODE", "PRE", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "TABLE", "THEAD",
+  "TBODY", "TR", "TH", "TD", "DEL", "SUP", "SUB",
+]);
+
+function sanitizeHtml(value: string): string {
+  // Connector and LLM text is untrusted. Keep a small presentational subset of
+  // Markdown HTML and strip every event/style attribute and unsafe URL scheme.
+  const documentValue = new DOMParser().parseFromString(value, "text/html");
+  for (const element of Array.from(documentValue.body.querySelectorAll("*"))) {
+    if (!SAFE_TAGS.has(element.tagName)) {
+      element.replaceWith(documentValue.createTextNode(element.textContent || ""));
+      continue;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const keep = element.tagName === "A" && ["href", "title"].includes(attribute.name.toLowerCase());
+      if (!keep) element.removeAttribute(attribute.name);
+    }
+    if (element.tagName === "A") {
+      const href = element.getAttribute("href") || "";
+      if (!/^(https?:|mailto:|\/)/i.test(href)) element.removeAttribute("href");
+      else element.setAttribute("rel", "noopener noreferrer");
+    }
+  }
+  return documentValue.body.innerHTML;
 }
 
 export function timeAgo(iso: string): string {

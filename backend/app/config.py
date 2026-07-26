@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     admin_password: str = "changeme"
     secret_key: str = "dev-insecure-secret-change-me"
     access_token_expire_minutes: int = 60 * 24 * 7
+    default_tenant_id: str = "default"
+    admin_role: str = "admin"
     data_dir: Path = DEFAULT_DATA_DIR
     database_url: str = ""
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -31,6 +33,11 @@ class Settings(BaseSettings):
     llm_timeout: int = 120
     openai_base_url: str = ""
     openai_api_key: str = ""
+    atlassian_oauth_client_id: str = ""
+    atlassian_oauth_client_secret: str = ""
+    atlassian_oauth_redirect_uri: str = "http://localhost:8000/api/atlassian/oauth/callback"
+    atlassian_bulk_max_issues: int = 100
+    atlassian_history_retention_days: int = 90
     # Claude Code tasks can only access this directory and its descendants.
     claude_workspace_root: Path = REPO_ROOT
 
