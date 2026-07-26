@@ -23,6 +23,9 @@ an SQLite backing store.
   endpoints, with a reusable prompt library and request history.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
 - **Notifications** — in-app notification feed for job and system events.
+- **Attack Simulation Lab** — classroom profiles for Windows, Linux, web, and
+  network behaviors with safe synthetic telemetry, MITRE ATT&CK mapping,
+  Splunk detections, and analyst triage guidance.
 
 ## Tech stack
 

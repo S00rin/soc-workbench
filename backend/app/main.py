@@ -16,7 +16,7 @@ from .database import SessionLocal, init_db
 from .jobs.scheduler import shutdown_scheduler, start_scheduler
 from .logging_config import get_logger, setup_logging
 from .routers import (
-    automation, intel, jira, llm, notifications, prompts, reports, search, splunk,
+    attack_lab, automation, intel, jira, llm, notifications, prompts, reports, search, splunk,
 )
 from .services import intelligence_automation, settings_service
 
@@ -54,6 +54,7 @@ app.add_middleware(
 for module in (
     auth, settings_api, dashboard, documents, knowledge, iocs, projects, jobs,
     jira, splunk, intel, reports, notifications, prompts, llm, search, automation,
+    attack_lab,
 ):
     app.include_router(module.router)
 

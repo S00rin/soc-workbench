@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { Markdown, Modal, useToast } from "../lib";
+import { useSearchParams } from "react-router-dom";
 
 export default function Splunk() {
-  const [spl, setSpl] = useState('search index=* | head 100');
+  const [params] = useSearchParams();
+  const [spl, setSpl] = useState(params.get("spl") || 'search index=* | head 100');
   const [earliest, setEarliest] = useState("-24h");
   const [latest, setLatest] = useState("now");
   const [data, setData] = useState<any>(null);

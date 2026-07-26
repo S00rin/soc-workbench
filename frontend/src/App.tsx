@@ -18,6 +18,8 @@ import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Prompts from "./pages/Prompts";
 import Automation from "./pages/Automation";
+import AttackLab from "./pages/AttackLab";
+import AttackScenario from "./pages/AttackScenario";
 
 type AuthState = "checking" | "in" | "out";
 
@@ -48,6 +50,8 @@ export default function App() {
       <Route path="/splunk" element={<Splunk />} />
       <Route path="/intel" element={<Intel />} />
       <Route path="/automation" element={<Automation />} />
+      <Route path="/attack-lab" element={<AttackLab />} />
+      <Route path="/attack-lab/:scenarioId" element={<AttackScenario />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/prompts" element={<Prompts />} />

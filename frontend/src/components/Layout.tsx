@@ -19,6 +19,9 @@ const NAV = [
     { to: "/notifications", icon: "✉", label: "Notifications" },
     { to: "/prompts", icon: "❯", label: "Prompt Library" },
   ]},
+  { group: "Training", items: [
+    { to: "/attack-lab", icon: "⌁", label: "Attack Simulation Lab" },
+  ]},
   { group: "System", items: [{ to: "/settings", icon: "⚙", label: "Settings" }]},
 ];
 const TITLES: Record<string,string> = {
@@ -27,6 +30,7 @@ const TITLES: Record<string,string> = {
   "/jira":"Jira", "/splunk":"Splunk & MCP", "/intel":"Internet Intelligence",
   "/automation":"Intelligence & Claude Automation", "/reports":"Reports",
   "/notifications":"Notifications", "/prompts":"Prompt Library", "/settings":"Settings",
+  "/attack-lab":"Attack Simulation Lab",
 };
 export default function Layout({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
   const [open,setOpen]=useState(false); const loc=useLocation();
@@ -40,7 +44,7 @@ export default function Layout({ children, onLogout }: { children: ReactNode; on
     </aside>
     <div className="main"><header className="topbar"><div className="row">
       <button className="btn-ghost btn-sm" onClick={()=>setOpen(o=>!o)} style={{display:"none"}} id="menuBtn">☰</button>
-      <span className="title">{TITLES[loc.pathname] || "SOC Workbench"}</span></div>
+      <span className="title">{TITLES[loc.pathname] || (loc.pathname.startsWith("/attack-lab/") ? "Attack Scenario" : "SOC Workbench")}</span></div>
       <div className="row"><span className="dim" style={{fontSize:12.5}}>admin</span>
       <button className="btn-sm btn-ghost" onClick={onLogout}>Sign out</button></div></header>
       <main className="content">{children}</main></div>
