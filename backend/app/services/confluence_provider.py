@@ -99,6 +99,64 @@ class ConfluenceProvider:
             }
         return capabilities
 
+    def find_page(self, space: str, title: str) -> dict | None:
+        """Return an existing page by exact title, or None.
+
+        CQL's ``space`` operator expects a space *key*. On Cloud the caller
+        passes a numeric space id (required by the v2 create API), which is not
+        a valid key, so in that case we match by title alone and let the caller
+        rely on the stored page id for subsequent updates.
+        """
+        safe_title = title.replace('"', '\\"')
+        cql = f'type=page and title="{safe_title}"'
+        if space and not space.isdigit():
+            cql += f' and space="{space}"'
+        results = self.search(cql, 1).get("results", [])
+        if not results:
+            return None
+        item = results[0]
+        return item.get("content", item)
+
+    def create_page(self, space_key: str, title: str, storage_html: str, parent_id: str = "") -> dict:
+        if self.cloud:
+            body: dict[str, Any] = {
+                "spaceId": space_key,
+                "status": "current",
+                "title": title,
+                "body": {"representation": "storage", "value": storage_html},
+            }
+            if parent_id:
+                body["parentId"] = parent_id
+            return self.transport.request("POST", "/wiki/api/v2/pages", json=body)
+        body = {
+            "type": "page",
+            "title": title,
+            "space": {"key": space_key},
+            "body": {"storage": {"value": storage_html, "representation": "storage"}},
+        }
+        if parent_id:
+            body["ancestors"] = [{"id": parent_id}]
+        return self.transport.request("POST", "/rest/api/content", json=body)
+
+    def update_page(self, page_id: str, title: str, storage_html: str, version: int) -> dict:
+        if self.cloud:
+            return self.transport.request(
+                "PUT", f"/wiki/api/v2/pages/{page_id}",
+                json={
+                    "id": page_id, "status": "current", "title": title,
+                    "body": {"representation": "storage", "value": storage_html},
+                    "version": {"number": version + 1},
+                },
+            )
+        return self.transport.request(
+            "PUT", f"/rest/api/content/{page_id}",
+            json={
+                "id": page_id, "type": "page", "title": title,
+                "body": {"storage": {"value": storage_html, "representation": "storage"}},
+                "version": {"number": version + 1},
+            },
+        )
+
     def add_footer_comment(self, page_id: str, text: str) -> dict:
         if self.cloud:
             return self.transport.request(

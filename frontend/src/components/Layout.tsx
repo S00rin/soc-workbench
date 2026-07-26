@@ -11,16 +11,17 @@ const NAV: { group: string; items: NavItem[] }[] = [
     { to: "/intelligence", icon: "04", label: "Intelligence", module: "intelligence" },
     { to: "/reports", icon: "05", label: "Reports", module: "reports" },
     { to: "/price-analyzer", icon: "06", label: "Price Analyzer", module: "price_analyzer" },
+    { to: "/sensors", icon: "07", label: "Sensor Library", module: "sensors" },
   ] },
   { group: "Manage", items: [
-    { to: "/operations", icon: "07", label: "Operations", module: "operations" },
-    { to: "/prompts", icon: "08", label: "Prompt Library", module: "prompts" },
-    { to: "/admin/access", icon: "09", label: "Access & Features", admin: true },
-    { to: "/settings", icon: "10", label: "Settings", module: "settings" },
+    { to: "/operations", icon: "08", label: "Operations", module: "operations" },
+    { to: "/prompts", icon: "09", label: "Prompt Library", module: "prompts" },
+    { to: "/admin/access", icon: "10", label: "Access & Features", admin: true },
+    { to: "/settings", icon: "11", label: "Settings", module: "settings" },
     { to: "/help", icon: "?", label: "Help Guides" },
   ] },
   { group: "Training", items: [
-    { to: "/attack-lab", icon: "11", label: "Attack Simulation Lab" },
+    { to: "/attack-lab", icon: "12", label: "Attack Simulation Lab" },
   ] },
   { group: "Soorin", items: [{ to: "/about-sorin", icon: "S", label: "معرفی سورین" }] },
 ];
@@ -28,6 +29,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
 const TITLES: Record<string, string> = {
   "/": "Dashboard", "/data": "Data & IoCs", "/integrations": "Integration Hub",
   "/intelligence": "Intelligence", "/reports": "Reports", "/price-analyzer": "Price Analyzer",
+  "/sensors": "Equipment & Sensor Library",
   "/operations": "Operations", "/prompts": "Prompt Library", "/settings": "Settings",
   "/admin/access": "Access & Feature Control", "/help": "Help Guides",
   "/about-sorin": "معرفی سورین", "/attack-lab": "Attack Simulation Lab",
