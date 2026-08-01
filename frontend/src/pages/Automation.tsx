@@ -25,7 +25,7 @@ export default function Automation() {
       const [a,b,c]=await Promise.all([
         api.get("/api/automation/intel-sources"),
         api.get("/api/automation/ioc-sources"),
-        api.get("/api/automation/claude-tasks"),
+        api.get("/api/automation/sorin-tasks"),
       ]);
       setIntel(a); setIocs(b); setTasks(c);
     } catch(e:any){toast(e.message,"error");}
@@ -61,8 +61,8 @@ export default function Automation() {
   async function submitTask() {
     if(!task.prompt||!task.workspace)return toast("Workspace and prompt are required","error");
     try {
-      await api.post("/api/automation/claude-tasks",{...task,title:task.title||"Claude Code task",timeout_seconds:600,max_turns:10});
-      setTask(x=>({...x,title:"",prompt:""})); await load(); toast("Claude Code task queued","ok");
+      await api.post("/api/automation/sorin-tasks",{...task,title:task.title||"Sorin Code task",timeout_seconds:600,max_turns:10});
+      setTask(x=>({...x,title:"",prompt:""})); await load(); toast("Sorin Code task queued","ok");
     } catch(e:any){toast(e.message,"error");}
   }
   if(!intel||!iocs||!tasks)return <Loading/>;
@@ -91,7 +91,7 @@ export default function Automation() {
       <div className="row mb"><label className="row"><input type="checkbox" style={{width:"auto"}} checked={feed.enabled} onChange={e=>setFeed({...feed,enabled:e.target.checked})}/> Enabled</label>
         <label className="row"><input type="checkbox" style={{width:"auto"}} checked={feed.auto_save_kb} onChange={e=>setFeed({...feed,auto_save_kb:e.target.checked})}/> Save to KB</label>
         <label className="row"><input type="checkbox" style={{width:"auto"}} checked={feed.auto_extract_iocs} onChange={e=>setFeed({...feed,auto_extract_iocs:e.target.checked})}/> Extract IoCs</label>
-        <label className="row"><input type="checkbox" style={{width:"auto"}} checked={feed.summarize} onChange={e=>setFeed({...feed,summarize:e.target.checked})}/> Claude summary</label>
+        <label className="row"><input type="checkbox" style={{width:"auto"}} checked={feed.summarize} onChange={e=>setFeed({...feed,summarize:e.target.checked})}/> Sorin summary</label>
         <button className="btn-primary btn-sm" onClick={saveFeed}>{feedId?"Update":"Add"} source</button>
         {feedId&&<button className="btn-sm" onClick={()=>{setFeedId(null);setFeed({...NEW_FEED});}}>Cancel</button>}
       </div>
@@ -119,12 +119,12 @@ export default function Automation() {
           <button className="btn-sm btn-danger" onClick={()=>remove("ioc",x.id)}>Delete</button></div></td></tr>)}</tbody></table>
     </div>
 
-    <div className="card"><div className="card-head"><h3>Claude Code tasks</h3></div>
+    <div className="card"><div className="card-head"><h3>Sorin Code tasks</h3></div>
       <div className="field-row"><div><label>Title</label><input value={task.title} onChange={e=>setTask({...task,title:e.target.value})}/></div>
         <div><label>Workspace</label><input className="mono" value={task.workspace} onChange={e=>setTask({...task,workspace:e.target.value})}/></div>
         <div><label>Mode</label><select value={task.mode} onChange={e=>setTask({...task,mode:e.target.value})}><option value="plan">Plan</option><option value="read-only">Read only</option><option value="edit">Edit files</option></select></div></div>
       <label>Prompt</label><textarea style={{minHeight:130}} value={task.prompt} onChange={e=>setTask({...task,prompt:e.target.value})}/>
-      <button className="btn-primary btn-sm mb" onClick={submitTask}>Run with Claude Code</button>
+      <button className="btn-primary btn-sm mb" onClick={submitTask}>Run with Sorin Code</button>
       <table className="data"><thead><tr><th>Task</th><th>Mode</th><th>Status</th><th>Changed files</th><th>Result</th></tr></thead>
       <tbody>{tasks.map(x=><tr key={x.id}><td>{x.title}</td><td>{x.mode}</td><td><span className="badge">{x.status}</span></td><td className="mono">{(x.changed_files||[]).join(", ")||"—"}</td><td style={{maxWidth:420,whiteSpace:"pre-wrap"}}>{x.error||x.output||"—"}</td></tr>)}</tbody></table>
     </div>

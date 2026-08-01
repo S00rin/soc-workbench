@@ -60,7 +60,7 @@ def safe_external_connection(row: ExternalConnection) -> dict:
         "verify_ssl": row.verify_ssl,
         "timeout": row.timeout,
         "enabled": row.enabled,
-        "ai_enabled": row.ai_enabled,
+        "sorin_enabled": row.sorin_enabled,
         "has_credentials": bool(row.credentials_encrypted),
         "last_test_at": row.last_test_at,
         "last_success_at": row.last_success_at,
@@ -96,7 +96,7 @@ def upsert_wikijs_connection(
         row.name = payload["name"].strip()
     if "base_url" in payload:
         row.base_url = validate_base_url(payload["base_url"])
-    for key in ("verify_ssl", "timeout", "enabled", "ai_enabled"):
+    for key in ("verify_ssl", "timeout", "enabled", "sorin_enabled"):
         if key in payload:
             setattr(row, key, payload[key])
     token = str(payload.get("api_token") or "").strip()

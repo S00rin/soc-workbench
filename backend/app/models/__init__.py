@@ -1,5 +1,5 @@
 """Register all models on the shared Base."""
-from .automation import ClaudeTask, IntelSource, IoCObservation, IoCSource
+from .automation import SorinTask, IntelSource, IoCObservation, IoCSource
 from .atlassian import (
     AtlassianConnection, AtlassianContentLink, AtlassianFieldMapping, AuditLog,
     BulkOperation, BulkOperationItem, IdempotencyRecord, IntegrationHistory,
@@ -19,7 +19,7 @@ __all__ = [
     "Setting", "Job", "SensitivePattern", "TokenMapping", "Document",
     "KnowledgeItem", "IntelItem", "IoC", "Project", "Report", "Prompt",
     "Notification", "Analysis", "IntelSource", "IoCSource",
-    "IoCObservation", "ClaudeTask",
+    "IoCObservation", "SorinTask",
     "AtlassianConnection", "AtlassianContentLink", "AtlassianFieldMapping",
     "AuditLog", "BulkOperation", "BulkOperationItem", "IdempotencyRecord",
     "IntegrationHistory",

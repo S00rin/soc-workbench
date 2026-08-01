@@ -327,7 +327,7 @@ function DocModal({ id, onClose, onChanged }: { id: number; onClose: () => void;
   if (!doc) return <Modal title="Document" onClose={onClose}><Loading /></Modal>;
 
   const views: Record<string, string> = {
-    analysis: doc.ai_analysis || "_Not analyzed yet. Run an analysis below._",
+    analysis: doc.sorin_analysis || "_Not analyzed yet. Run an analysis below._",
     summary: doc.summary || "_No summary._",
     optimized: doc.optimized_markdown,
     protected: doc.protected_markdown,

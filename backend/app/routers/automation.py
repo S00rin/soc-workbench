@@ -1,4 +1,4 @@
-"""APIs for scheduled intelligence sources and safe Claude Code tasks."""
+"""APIs for scheduled intelligence sources and safe Sorin Code tasks."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models.automation import ClaudeTask, IntelSource, IoCSource
+from ..models.automation import SorinTask, IntelSource, IoCSource
 from ..security import get_current_user
-from ..services import claude_tasks, intelligence_automation
+from ..services import sorin_tasks, intelligence_automation
 
 router = APIRouter(prefix="/api/automation", tags=["automation"])
 
@@ -36,8 +36,8 @@ class IoCSourceIn(BaseModel):
     configuration: dict = Field(default_factory=dict)
 
 
-class ClaudeTaskIn(BaseModel):
-    title: str = "Claude Code task"
+class SorinTaskIn(BaseModel):
+    title: str = "Sorin Code task"
     prompt: str = Field(min_length=1)
     workspace: str
     mode: str = "read-only"
@@ -159,31 +159,31 @@ def run_all(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     return intelligence_automation.run_all(db, force=True)
 
 
-@router.get("/claude-tasks")
-def list_claude_tasks(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
-    rows = db.query(ClaudeTask).order_by(ClaudeTask.created_at.desc()).limit(100).all()
+@router.get("/sorin-tasks")
+def list_sorin_tasks(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    rows = db.query(SorinTask).order_by(SorinTask.created_at.desc()).limit(100).all()
     return [_row(x) for x in rows]
 
 
-@router.get("/claude-tasks/{task_id}")
-def get_claude_task(task_id: int, db: Session = Depends(get_db),
+@router.get("/sorin-tasks/{task_id}")
+def get_sorin_task(task_id: int, db: Session = Depends(get_db),
                     _: str = Depends(get_current_user)):
-    row = db.get(ClaudeTask, task_id)
+    row = db.get(SorinTask, task_id)
     if not row:
-        raise HTTPException(404, "Claude task not found")
+        raise HTTPException(404, "Sorin task not found")
     return _row(row)
 
 
-@router.post("/claude-tasks")
-def create_claude_task(payload: ClaudeTaskIn, db: Session = Depends(get_db),
+@router.post("/sorin-tasks")
+def create_sorin_task(payload: SorinTaskIn, db: Session = Depends(get_db),
                        _: str = Depends(get_current_user)):
     if payload.mode not in {"plan", "read-only", "edit"}:
         raise HTTPException(400, "Mode must be plan, read-only, or edit")
     try:
-        claude_tasks._allowed_workspace(payload.workspace)
+        sorin_tasks._allowed_workspace(payload.workspace)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    row = ClaudeTask(**payload.model_dump())
+    row = SorinTask(**payload.model_dump())
     db.add(row); db.commit(); db.refresh(row)
-    claude_tasks.submit(row.id)
+    sorin_tasks.submit(row.id)
     return _row(row)

@@ -34,7 +34,12 @@ def _render_text_image(path: Path, text: str) -> None:
 
     image = Image.new("RGB", (900, 220), "white")
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 34)
+    candidates = (
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("C:/Windows/Fonts/arial.ttf"),
+    )
+    font_path = next((candidate for candidate in candidates if candidate.is_file()), None)
+    font = ImageFont.truetype(str(font_path), 34) if font_path else ImageFont.load_default(size=34)
     draw.text((30, 40), text, fill="black", font=font, spacing=14)
     image.save(path)
 

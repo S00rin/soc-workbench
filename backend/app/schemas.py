@@ -100,7 +100,7 @@ class DocumentSaveIn(BaseModel):
     markdown: str = ""
     protected_markdown: str = ""
     optimized_markdown: str = ""
-    ai_analysis: str = ""
+    sorin_analysis: str = ""
     summary: str = ""
     entities: dict = Field(default_factory=dict)
     protection_mode: str = "mask"
@@ -119,7 +119,7 @@ class DocumentOut(ORMModel):
     markdown: str
     protected_markdown: str
     optimized_markdown: str
-    ai_analysis: str
+    sorin_analysis: str
     summary: str
     entities: dict
     protection_mode: str

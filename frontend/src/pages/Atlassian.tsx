@@ -8,7 +8,7 @@ type Connection = {
   id: number; name: string; products: Product[]; deployment_type: "cloud" | "data_center";
   auth_type: "api_token" | "pat" | "basic" | "oauth2"; base_url: string; cloud_id: string;
   username: string; scopes: string[]; verify_ssl: boolean; timeout: number; enabled: boolean;
-  ai_enabled: boolean; auto_post_enabled: boolean; bulk_auto_post_enabled: boolean;
+  sorin_enabled: boolean; auto_post_enabled: boolean; bulk_auto_post_enabled: boolean;
   has_credentials: boolean; last_test_at?: string; last_success_at?: string;
   last_error_code?: string; last_error_summary?: string;
 };
@@ -41,7 +41,7 @@ export default function Atlassian() {
 
   return <div className="atlassian-page">
     <div className="atlassian-head mb">
-      <div><h1>Atlassian Integrations</h1><p>Secure Jira and Confluence connections, mapping, audit history, and controlled AI comments.</p></div>
+      <div><h1>Atlassian Integrations</h1><p>Secure Jira and Confluence connections, mapping, audit history, and controlled Sorin comments.</p></div>
       {connections.length > 0 && <select value={selected?.id || ""} onChange={(event) => setSelectedId(Number(event.target.value))} aria-label="Active Atlassian connection">
         {connections.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
       </select>}
@@ -130,7 +130,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial: Connection | 
   const [form, setForm] = useState<any>(initial ? { ...initial, credentials: {} } : {
     name: "", products: ["jira"], deployment_type: "cloud", auth_type: "api_token", base_url: "",
     cloud_id: "", username: "", credentials: {}, scopes: [], verify_ssl: true, timeout: 30,
-    enabled: true, ai_enabled: true, auto_post_enabled: false, bulk_auto_post_enabled: false,
+    enabled: true, sorin_enabled: true, auto_post_enabled: false, bulk_auto_post_enabled: false,
   });
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -160,7 +160,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial: Connection | 
     <label>Base URL</label><input value={form.base_url} onChange={(e) => set("base_url", e.target.value)} className="mono" placeholder="https://company.atlassian.net" />
     <div className="field-row"><div><label>Email / username</label><input value={form.username} onChange={(e) => set("username", e.target.value)} /></div>{credentialKey && <div><label>{human(credentialKey)} {initial?.has_credentials && <span className="faint">(leave blank to keep)</span>}</label><input type="password" value={form.credentials[credentialKey] || ""} onChange={(e) => setSecret(credentialKey, e.target.value)} /></div>}</div>
     {form.auth_type === "oauth2" && <div className="notice">Save first, then use “Reconnect OAuth”. OAuth Client ID/Secret and redirect URI are configured through environment variables.</div>}
-    <div className="field-row"><div><label>Timeout (seconds)</label><input type="number" min={5} max={180} value={form.timeout} onChange={(e) => set("timeout", Number(e.target.value))} /></div><div><label>Security policies</label><div className="check-row wrap"><label><input type="checkbox" checked={form.verify_ssl} onChange={(e) => set("verify_ssl", e.target.checked)} /> Verify TLS</label><label><input type="checkbox" checked={form.ai_enabled} onChange={(e) => set("ai_enabled", e.target.checked)} /> AI enabled</label><label><input type="checkbox" checked={form.auto_post_enabled} onChange={(e) => set("auto_post_enabled", e.target.checked)} /> Auto-post</label><label><input type="checkbox" checked={form.bulk_auto_post_enabled} onChange={(e) => set("bulk_auto_post_enabled", e.target.checked)} /> Bulk auto-post</label></div></div></div>
+    <div className="field-row"><div><label>Timeout (seconds)</label><input type="number" min={5} max={180} value={form.timeout} onChange={(e) => set("timeout", Number(e.target.value))} /></div><div><label>Security policies</label><div className="check-row wrap"><label><input type="checkbox" checked={form.verify_ssl} onChange={(e) => set("verify_ssl", e.target.checked)} /> Verify TLS</label><label><input type="checkbox" checked={form.sorin_enabled} onChange={(e) => set("sorin_enabled", e.target.checked)} /> Sorin enabled</label><label><input type="checkbox" checked={form.auto_post_enabled} onChange={(e) => set("auto_post_enabled", e.target.checked)} /> Auto-post</label><label><input type="checkbox" checked={form.bulk_auto_post_enabled} onChange={(e) => set("bulk_auto_post_enabled", e.target.checked)} /> Bulk auto-post</label></div></div></div>
   </Modal>;
 }
 

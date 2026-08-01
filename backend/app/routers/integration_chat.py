@@ -69,7 +69,7 @@ def combined_connections(db: Session = Depends(get_db), context: AuthContext = D
     if get_value(db, "splunk_base_url"):
         items.append({
             "connection_id": 1, "provider": "splunk", "name": "Splunk", "display_name": "Splunk",
-            "base_url": get_value(db, "splunk_base_url"), "enabled": True, "ai_enabled": True,
+            "base_url": get_value(db, "splunk_base_url"), "enabled": True, "sorin_enabled": True,
             "has_credentials": bool(get_value(db, "splunk_token") or get_value(db, "splunk_password")),
         })
     return items

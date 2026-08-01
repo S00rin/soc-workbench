@@ -7,12 +7,17 @@ import Splunk from "./Splunk";
 const TABS = ["chat", "atlassian", "wikijs", "splunk"] as const;
 const LABELS = { chat: "Prompt Chat", atlassian: "Jira & Confluence", wikijs: "Wiki.js", splunk: "Splunk" };
 
-export default function IntegrationHub() {
+export default function AnalyzerHub() {
   const [params, setParams] = useSearchParams();
   const raw = params.get("tab") || "chat";
   const tab = TABS.includes(raw as any) ? raw as typeof TABS[number] : "chat";
   return <>
-    <div className="page-intro"><div><h1>Integration Hub</h1><p>One place for connections, permissions, natural-language analysis and complete history.</p></div></div>
+    <div className="page-intro"><div><h1>Analyzer Hub</h1><p>Connect security services, run focused Sorin analysis, and review traceable results from one workspace.</p></div></div>
+    <div className="analyzer-flow mb">
+      <button className="card analyzer-step" onClick={() => setParams({ tab: "atlassian" })}><span>1</span><div><b>Connect</b><small>Configure and verify data sources.</small></div></button>
+      <button className="card analyzer-step" onClick={() => setParams({ tab: "chat" })}><span>2</span><div><b>Analyze</b><small>Ask a focused question with Sorin.</small></div></button>
+      <button className="card analyzer-step" onClick={() => setParams({ tab: "chat" })}><span>3</span><div><b>Review</b><small>Inspect results and complete history.</small></div></button>
+    </div>
     <div className="tabs hub-tabs">{TABS.map(item => <button className={`tab ${tab === item ? "active" : ""}`} key={item} onClick={() => setParams({ tab: item })}>{LABELS[item]}</button>)}</div>
     {tab === "chat" && <IntegrationChat />}
     {tab === "atlassian" && <Atlassian />}

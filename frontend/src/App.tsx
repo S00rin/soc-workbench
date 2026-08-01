@@ -7,7 +7,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import DataHub from "./pages/DataHub";
-import IntegrationHub from "./pages/IntegrationHub";
+import AnalyzerHub from "./pages/AnalyzerHub";
 import IntelligenceHub from "./pages/IntelligenceHub";
 import OperationsHub from "./pages/OperationsHub";
 import Settings from "./pages/Settings";
@@ -58,7 +58,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Allowed module="dashboard"><Dashboard /></Allowed>} />
         <Route path="/data" element={<Allowed module="data"><DataHub /></Allowed>} />
-        <Route path="/integrations" element={<Allowed module="integrations"><IntegrationHub /></Allowed>} />
+        <Route path="/integrations" element={<Allowed module="integrations"><AnalyzerHub /></Allowed>} />
         <Route path="/intelligence" element={<Allowed module="intelligence"><IntelligenceHub /></Allowed>} />
         <Route path="/reports" element={<Allowed module="reports"><Reports /></Allowed>} />
         <Route path="/price-analyzer" element={<Allowed module="price_analyzer"><PriceAnalyzer /></Allowed>} />
@@ -67,6 +67,7 @@ export default function App() {
         <Route path="/prompts" element={<Allowed module="prompts"><Prompts /></Allowed>} />
         <Route path="/settings" element={<Allowed module="settings"><Settings /></Allowed>} />
         <Route path="/admin/access" element={access.user.role === "admin" ? <AccessAdmin /> : <Navigate to="/" replace />} />
+        <Route path="/admin/audit" element={access.user.role === "admin" ? <AccessAdmin initialTab="activity" /> : <Navigate to="/" replace />} />
         <Route path="/help" element={<Help />} />
         <Route path="/about-sorin" element={<AboutSorin />} />
         <Route path="/attack-lab" element={<AttackLab />} />

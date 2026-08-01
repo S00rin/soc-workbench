@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.database import Base
 from app.models import AtlassianConnection
 from app.security import AuthContext, decrypt_secret, require_admin
-from app.services.ai_comments import is_similar_comment
+from app.services.sorin_comments import is_similar_comment
 from app.services.atlassian_connections import create_or_update, scoped_connection
 from app.services.atlassian_credentials import decrypt_credentials, encrypt_credentials, oauth_access_token, validate_base_url
 from app.services.atlassian_http import AtlassianError, AtlassianTransport, classify_error

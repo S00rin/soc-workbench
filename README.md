@@ -11,6 +11,10 @@ an SQLite backing store.
 
 ## Features
 
+- **Light and dark themes** — switch from the top bar; the browser remembers the choice.
+- **Right-side navigation** — begins with About Sorin and adapts to small screens.
+- **Analyzer Hub** — a guided Connect → Analyze → Review workspace for connected services.
+- **Audit Log** — tenant-scoped administrator history with user/action/status filters, full trace IDs, and CSV export.
 - **Input processing** — extract text from PDF, DOCX, XLSX, PPTX, HTML, and
   Markdown, with automatic sensitive-data tokenization. Scanned PDFs and image
   files (PNG/JPG/TIFF/…) are read with OCR (Persian + English).
@@ -37,9 +41,9 @@ an SQLite backing store.
   search and prompt-based analysis.
 - **Product governance** — multiple local users, module RBAC, activity history,
   and admin-controlled feature start/expiry windows.
-- **LLM assistance** — Anthropic (Claude) and optional OpenAI-compatible
+- **Sorin assistance** — managed Sorin and optional compatible
   endpoints, with a reusable prompt library and request history. No API key?
-  Use the `claude_cli` (Claude Code) or `codex_cli` (ChatGPT Codex) provider to
+  Use the `sorin_cli` (Sorin Code) or `codex_cli` (Sorin Codex) provider to
   run analysis through a local CLI agent with your existing subscription.
 - **Background jobs** — scheduled tasks via APScheduler (feed refresh, backups).
 - **Notifications** — in-app notification feed for job and system events.
@@ -61,11 +65,12 @@ an SQLite backing store.
 | Backend   | Python 3.12+, FastAPI, SQLAlchemy 2, APScheduler        |
 | Database  | SQLite (file-based, under `data/`)                      |
 | Frontend  | React 18, TypeScript, Vite, React Router               |
-| LLM       | `anthropic` SDK; OpenAI-compatible endpoint; or local `claude`/`codex` CLI (no API key) |
+| LLM       | `anthropic` SDK; Sorin-compatible endpoint; or local `sorin`/`codex` CLI (no API key) |
 | OCR       | Tesseract (`fas`+`eng`) via pytesseract + pypdfium2 (optional)   |
 | Auth      | JWT with database users, module RBAC and encrypted secrets |
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper walkthrough.
+See [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) for product usage and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper technical walkthrough.
 
 ## Quick start
 
@@ -151,8 +156,8 @@ runtime in the **Settings** UI and are stored in the database. Key variables:
 | `SECRET_KEY`             | Signs JWTs **and** encrypts stored secrets — set it |
 | `DATA_DIR`               | Where SQLite DB, uploads, reports, backups live     |
 | `CORS_ORIGINS`           | Allowed frontend origins (comma-separated)          |
-| `ANTHROPIC_API_KEY`      | Claude API key (optional; also settable in UI)      |
-| `OPENAI_BASE_URL/KEY`    | Optional OpenAI-compatible endpoint                 |
+| `ANTHROPIC_API_KEY`      | Sorin API key (optional; also settable in UI)      |
+| `COMPATIBLE_BASE_URL/KEY`    | Optional Sorin-compatible endpoint                 |
 | `ATLASSIAN_OAUTH_*`      | Optional Jira/Confluence Cloud OAuth 2.0 (3LO) app  |
 | `ATLASSIAN_BULK_MAX_ISSUES` | Hard ceiling for one bulk comment job            |
 | `ATLASSIAN_HISTORY_RETENTION_DAYS` | Default history retention policy        |
@@ -222,7 +227,7 @@ No license file is included yet — all rights reserved by default. Add a
 `LICENSE` file if you intend to share or open-source this project.
 
 
-## Intelligence and Claude automation
+## Intelligence and Sorin automation
 
 The **Automation** page provides editable news/IoC sources (add, update, disable,\ndelete, or run on demand) and three local workflows:
 
@@ -231,13 +236,13 @@ The **Automation** page provides editable news/IoC sources (add, update, disable
   are saved directly to the Knowledge Base and their IoCs are extracted.
 - Built-in IoC adapters for ThreatFox, URLhaus, and CISA KEV. Values are
   normalized, non-public IPv4 addresses are rejected, and source observations\n  are retained for correlation. All Knowledge Base content is also scanned for\n  valid indicator-shaped values during scheduled and on-demand runs.
-- Claude Code tasks in `plan`, `read-only`, or `edit` mode. Task
-  workspaces must be under `CLAUDE_WORKSPACE_ROOT`. Edit mode permits file
-  editing but does not enable Bash or bypass Claude Code permissions.
+- Sorin Code tasks in `plan`, `read-only`, or `edit` mode. Task
+  workspaces must be under `SORIN_WORKSPACE_ROOT`. Edit mode permits file
+  editing but does not enable Bash or bypass Sorin Code permissions.
 
 The scheduler starts with the application, polls every 15 minutes, and runs each\nsource according to its editable interval. Manual collection is available from the Automation page or through
 `POST /api/automation/run-all`.
 
-> Claude Code must be installed and authenticated on the host running SOC
-> Workbench. Keep `CLAUDE_WORKSPACE_ROOT` narrow; do not point it at your home
+> Sorin Code must be installed and authenticated on the host running SOC
+> Workbench. Keep `SORIN_WORKSPACE_ROOT` narrow; do not point it at your home
 > directory or a directory containing secrets.

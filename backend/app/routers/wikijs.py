@@ -26,7 +26,7 @@ class WikiConnectionIn(BaseModel):
     verify_ssl: bool = True
     timeout: int = Field(default=30, ge=5, le=120)
     enabled: bool = True
-    ai_enabled: bool = True
+    sorin_enabled: bool = True
 
 
 class WikiSearchIn(BaseModel):

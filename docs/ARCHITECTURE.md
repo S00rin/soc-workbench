@@ -61,8 +61,8 @@ per-feature routers.
   mapping is encrypted at rest with `SECRET_KEY`.
 - `entities`, `optimizer` — entity extraction and content optimization.
 - `intel_collector` — fetch and normalize RSS/Atom threat feeds.
-- `llm` — provider abstraction over Anthropic and OpenAI-compatible APIs, plus
-  local CLI agents (`claude_cli`, `codex_cli`) that use a Claude Code / ChatGPT
+- `llm` — provider abstraction over Anthropic and Sorin-compatible APIs, plus
+  local CLI agents (`sorin_cli`, `codex_cli`) that use a Sorin Code / Sorin
   Codex subscription with no API key.
 - `jira_client`, `splunk_client` — thin integration clients.
 - `report_builder` — assemble Markdown/HTML reports.

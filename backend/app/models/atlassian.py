@@ -37,7 +37,7 @@ class AtlassianConnection(Base, TimestampMixin):
     verify_ssl: Mapped[bool] = mapped_column(Boolean, default=True)
     timeout: Mapped[int] = mapped_column(Integer, default=30)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    sorin_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     auto_post_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     bulk_auto_post_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

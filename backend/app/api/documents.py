@@ -40,7 +40,7 @@ LLM_KEYS = (
     "llm_temperature",
     "llm_timeout",
     "llm_api_key",
-    "claude_cli_path",
+    "sorin_cli_path",
     "codex_cli_path",
 )
 
@@ -247,7 +247,7 @@ def analyze_document(
         raise HTTPException(
             400,
             "No LLM credentials configured. Set an API key in Settings → LLM, or "
-            "select the 'claude_cli' provider to use the local Claude Code agent.",
+            "select the 'sorin_cli' provider to use the local Sorin Code agent.",
         )
 
     system = payload.system_prompt or "You are a senior SOC analyst assistant. Be precise and cite only what is in the content."
@@ -260,7 +260,7 @@ def analyze_document(
         try:
             d = wdb.get(Document, doc_id)
             if d:
-                d.ai_analysis = res.text
+                d.sorin_analysis = res.text
                 wdb.add(
                     Analysis(
                         kind="llm",
@@ -293,7 +293,7 @@ def document_to_knowledge(
     doc = db.get(Document, doc_id)
     if not doc:
         raise HTTPException(404, "Document not found")
-    body = doc.ai_analysis or doc.protected_markdown or doc.markdown
+    body = doc.sorin_analysis or doc.protected_markdown or doc.markdown
     item = KnowledgeItem(
         title=doc.title,
         item_type="note",

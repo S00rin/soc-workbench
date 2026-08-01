@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import csv
+import io
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
@@ -226,7 +229,7 @@ def update_feature(feature_key: str, payload: FeaturePolicyIn, db: Session = Dep
 
 @router.get("/api/admin/activity")
 def activity_history(
-    actor: str = "", module: str = "", action: str = "", status_code: int | None = None,
+    actor: str = "", module: str = "", action: str = "", status: str = "", status_code: int | None = None,
     page: int = Query(default=1, ge=1), page_size: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db), context: AuthContext = Depends(require_admin),
 ):
@@ -239,9 +242,37 @@ def activity_history(
         query = query.filter(UserActivity.action.contains(action[:120]))
     if status_code is not None:
         query = query.filter(UserActivity.status_code == status_code)
+    elif status == "success":
+        query = query.filter(UserActivity.status_code < 400)
+    elif status == "failed":
+        query = query.filter(UserActivity.status_code >= 400)
     total = query.count()
     rows = query.order_by(desc(UserActivity.created_at)).offset((page - 1) * page_size).limit(page_size).all()
     return {
         "items": [{column.name: getattr(row, column.name) for column in row.__table__.columns} for row in rows],
         "total": total, "page": page, "page_size": page_size,
     }
+
+
+@router.get("/api/admin/activity-export.csv")
+def export_activity(
+    actor: str = "", module: str = "", action: str = "", status: str = "",
+    db: Session = Depends(get_db), context: AuthContext = Depends(require_admin),
+):
+    query = db.query(UserActivity).filter(UserActivity.tenant_id == context.tenant_id)
+    if actor:
+        query = query.filter(UserActivity.actor_user_id == actor[:120])
+    if module:
+        query = query.filter(UserActivity.module_key == module[:80])
+    if action:
+        query = query.filter(UserActivity.action.contains(action[:120]))
+    if status == "success":
+        query = query.filter(UserActivity.status_code < 400)
+    elif status == "failed":
+        query = query.filter(UserActivity.status_code >= 400)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["time", "user", "module", "action", "method", "path", "status_code", "duration_ms", "trace_id"])
+    for row in query.order_by(desc(UserActivity.created_at)).limit(10000):
+        writer.writerow([row.created_at.isoformat(), row.actor_user_id, row.module_key, row.action, row.method, row.path, row.status_code, row.duration_ms, row.correlation_id])
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=audit-log.csv"})

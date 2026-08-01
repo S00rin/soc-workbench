@@ -29,7 +29,7 @@ MODULE_CATALOG = [
 FEATURE_CATALOG = [
     {"key": "module.dashboard", "label": "Dashboard", "module": "dashboard"},
     {"key": "module.data", "label": "Data & IoCs", "module": "data"},
-    {"key": "module.integrations", "label": "Integration Hub", "module": "integrations"},
+    {"key": "module.integrations", "label": "Analyzer Hub", "module": "integrations"},
     {"key": "integration.jira", "label": "Jira", "module": "integrations"},
     {"key": "integration.confluence", "label": "Confluence", "module": "integrations"},
     {"key": "integration.wikijs", "label": "Wiki.js", "module": "integrations"},
@@ -43,7 +43,7 @@ FEATURE_CATALOG = [
     {"key": "module.operations", "label": "Jobs & Notifications", "module": "operations"},
     {"key": "module.prompts", "label": "Prompt Library", "module": "prompts"},
     {"key": "module.settings", "label": "Settings", "module": "settings"},
-    {"key": "ai.processing", "label": "AI Processing", "module": "data"},
+    {"key": "sorin.processing", "label": "Sorin Processing", "module": "data"},
 ]
 
 ALL_MODULE_KEYS = [item["key"] for item in MODULE_CATALOG]

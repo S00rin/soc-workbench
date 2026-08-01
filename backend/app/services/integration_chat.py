@@ -297,27 +297,27 @@ def execute_turn(db: Session, context: AuthContext, session: IntegrationChatSess
     previous_query = previous[-1].generated_query if previous else session.scope_query
     model = ""
     provider_name = "rules"
-    ai_allowed = feature_state(db, context.tenant_id, "ai.processing", context.role)["active"]
+    sorin_allowed = feature_state(db, context.tenant_id, "sorin.processing", context.role)["active"]
     if session.provider in {"jira", "confluence"}:
         connection = db.query(AtlassianConnection).filter(
             AtlassianConnection.id == session.connection_id,
             AtlassianConnection.tenant_id == context.tenant_id,
         ).first()
-        ai_allowed = ai_allowed and bool(connection and connection.ai_enabled)
+        sorin_allowed = sorin_allowed and bool(connection and connection.sorin_enabled)
     elif session.provider == "wikijs":
         connection = db.query(ExternalConnection).filter(
             ExternalConnection.id == session.connection_id,
             ExternalConnection.tenant_id == context.tenant_id,
             ExternalConnection.provider == "wikijs",
         ).first()
-        ai_allowed = ai_allowed and bool(connection and connection.ai_enabled)
+        sorin_allowed = sorin_allowed and bool(connection and connection.sorin_enabled)
     try:
         if query_override.strip():
             query = _clean_query(query_override, session.provider)
         else:
-            query, provider_name, model = _generate_query(db, session.provider, redacted_prompt, previous_query, ai_allowed)
+            query, provider_name, model = _generate_query(db, session.provider, redacted_prompt, previous_query, sorin_allowed)
         items, connection_name = _execute_search(db, context, session, query)
-        answer, answer_provider, answer_model = _answer(db, session.provider, redacted_prompt, query, items, previous, ai_allowed)
+        answer, answer_provider, answer_model = _answer(db, session.provider, redacted_prompt, query, items, previous, sorin_allowed)
         provider_name = answer_provider if answer_provider != "rules" else provider_name
         model = answer_model or model
         duration = int((time.perf_counter() - started) * 1000)
