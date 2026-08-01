@@ -6,7 +6,7 @@ import { Loading, Markdown, useToast } from "../lib";
 type Provider = "jira" | "confluence" | "wikijs" | "splunk";
 type Connection = {
   connection_id: number; provider: Provider; display_name: string; enabled: boolean;
-  ai_enabled?: boolean; base_url?: string;
+  sorin_enabled?: boolean; base_url?: string;
 };
 type Session = {
   id: number; provider: Provider; connection_id: number; title: string; message_count: number;

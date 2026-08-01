@@ -41,7 +41,7 @@ def test_provider(db: Session = Depends(get_db), user: str = Depends(get_current
         raise HTTPException(
             400,
             "No LLM credentials configured. Set an API key in Settings → LLM, or "
-            "select the 'claude_cli' provider to use the local Claude Code agent.",
+            "select the 'sorin_cli' provider to use the local Sorin Code agent.",
         )
     try:
         result = llm.complete("You are a test.", "Reply with the single word OK.", cfg)

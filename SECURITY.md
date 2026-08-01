@@ -70,7 +70,7 @@ provider, MFA, distributed rate limiting and broader tenant-isolation review.
 - Jira, Confluence, Wiki.js and Splunk prompts and source content are untrusted
   LLM context. Output is redacted before persistence and sanitized before HTML
   rendering.
-- Disabling AI globally or on a connection prevents that connection's content
+- Disabling Sorin globally or on a connection prevents that connection's content
   from being sent to the model. Provider queries remain read-only and bounded.
 
 ## Reporting a vulnerability

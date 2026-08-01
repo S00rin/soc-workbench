@@ -5,11 +5,11 @@ import { Loading, Modal, useToast } from "../lib";
 
 type Connection = {
   id: number; name: string; base_url: string; verify_ssl: boolean; timeout: number;
-  enabled: boolean; ai_enabled: boolean; has_credentials: boolean; last_success_at?: string;
+  enabled: boolean; sorin_enabled: boolean; has_credentials: boolean; last_success_at?: string;
   last_error_code?: string; last_error_summary?: string;
 };
 
-const emptyForm = { name: "Wiki.js", base_url: "", api_token: "", verify_ssl: true, timeout: 30, enabled: true, ai_enabled: true };
+const emptyForm = { name: "Wiki.js", base_url: "", api_token: "", verify_ssl: true, timeout: 30, enabled: true, sorin_enabled: true };
 
 export default function WikiJS() {
   const access = useAccess();
@@ -61,7 +61,7 @@ export default function WikiJS() {
       {rows.map(row => <div className="card connection-card" key={row.id}>
         <div className="card-head"><div><h3>{row.name}</h3><span className={`badge ${row.last_error_code ? "red" : row.last_success_at ? "green" : "yellow"}`}>{row.last_error_code ? "Action required" : row.last_success_at ? "Connected" : "Not tested"}</span></div><span className="badge blue">Wiki.js</span></div>
         <div className="connection-url mono">{row.base_url}</div>
-        <div className="connection-meta"><span>Token: {row.has_credentials ? "configured" : "missing"}</span><span>AI: {row.ai_enabled ? "enabled" : "disabled"}</span></div>
+        <div className="connection-meta"><span>Token: {row.has_credentials ? "configured" : "missing"}</span><span>Sorin: {row.sorin_enabled ? "enabled" : "disabled"}</span></div>
         {row.last_error_summary && <div className="action-error"><b>{row.last_error_code}</b>{row.last_error_summary}</div>}
         <div className="row mt"><button className="btn-sm" disabled={testing === row.id} onClick={() => test(row)}>{testing === row.id ? <span className="spin" /> : "Test & permissions"}</button>{access.user.role === "admin" && <><button className="btn-sm" onClick={() => setEditing(row)}>Edit</button><span className="spacer" /><button className="btn-sm btn-danger" onClick={() => remove(row)}>Delete</button></>}</div>
         {capabilities[row.id] && <div className="capability-grid">{Object.entries(capabilities[row.id]).map(([name, info]: any) => <div key={name} className={info.allowed ? "allowed" : "denied"}><span>{info.allowed ? "✓" : "×"}</span><div><b>{name.replace(/_/g, " ")}</b>{info.error?.action && <small>{info.error.action}</small>}</div></div>)}</div>}
@@ -90,6 +90,6 @@ function WikiConnectionModal({ initial, onClose, onSaved }: { initial: Connectio
     <label>Name</label><input value={form.name} onChange={event => set("name", event.target.value)} />
     <label>Base URL</label><input className="mono" placeholder="https://wiki.company.local" value={form.base_url} onChange={event => set("base_url", event.target.value)} />
     <label>API token {initial?.has_credentials && <span className="faint">(leave blank to keep existing)</span>}</label><input type="password" autoComplete="new-password" value={form.api_token} onChange={event => set("api_token", event.target.value)} />
-    <div className="field-row"><div><label>Timeout</label><input type="number" min={5} max={120} value={form.timeout} onChange={event => set("timeout", Number(event.target.value))} /></div><div><label>Policies</label><div className="check-row wrap"><label><input type="checkbox" checked={form.verify_ssl} onChange={event => set("verify_ssl", event.target.checked)} /> Verify TLS</label><label><input type="checkbox" checked={form.enabled} onChange={event => set("enabled", event.target.checked)} /> Enabled</label><label><input type="checkbox" checked={form.ai_enabled} onChange={event => set("ai_enabled", event.target.checked)} /> AI enabled</label></div></div></div>
+    <div className="field-row"><div><label>Timeout</label><input type="number" min={5} max={120} value={form.timeout} onChange={event => set("timeout", Number(event.target.value))} /></div><div><label>Policies</label><div className="check-row wrap"><label><input type="checkbox" checked={form.verify_ssl} onChange={event => set("verify_ssl", event.target.checked)} /> Verify TLS</label><label><input type="checkbox" checked={form.enabled} onChange={event => set("enabled", event.target.checked)} /> Enabled</label><label><input type="checkbox" checked={form.sorin_enabled} onChange={event => set("sorin_enabled", event.target.checked)} /> Sorin enabled</label></div></div></div>
   </Modal>;
 }

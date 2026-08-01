@@ -29,7 +29,7 @@ The left sidebar groups features by purpose:
 - **Dashboard** — a live overview of recent activity.
 - **Data & IoCs** — document processing, the knowledge base, indicators of
   compromise, and projects.
-- **Integration Hub** — Jira, Confluence, Wiki.js and Splunk, plus a natural
+- **Analyzer Hub** — Jira, Confluence, Wiki.js and Splunk, plus a natural
   language chat that turns your question into a read-only query.
 - **Intelligence** — RSS/Atom threat feeds and automation rules.
 - **Reports** — assemble and export Markdown/HTML/DOCX/PDF reports.
@@ -180,7 +180,7 @@ an editable estimate.
     (
         "integration-hub", "user", "Workspace", 3,
         "Jira, Confluence, Wiki.js and Splunk",
-        """The **Integration Hub** connects Jira, Confluence, Wiki.js and
+        """The **Analyzer Hub** connects Jira, Confluence, Wiki.js and
 Splunk. Each connection is scoped to your tenant and encrypted at rest.
 
 Use the **prompt chat** to ask a question in plain language; it generates a
@@ -267,7 +267,7 @@ with `must_change_password` set, so the first login forces a password reset.
 
 ## Feature policies
 Every module (and some finer-grained features like `integration.jira` or
-`ai.processing`) has a policy: enabled/disabled, an optional start/expiry
+`sorin.processing`) has a policy: enabled/disabled, an optional start/expiry
 window, and an optional role restriction. This lets you trial a module for
 a limited time, restrict it to certain roles, or kill-switch it instantly
 without touching code.
@@ -292,7 +292,7 @@ even users with the module key will be blocked until you re-enable it.""",
 تعویض رمز عبور را الزامی می‌کند.
 
 ## سیاست‌های امکانات
-هر ماژول (و برخی امکانات دقیق‌تر مانند `integration.jira` یا `ai.processing`)
+هر ماژول (و برخی امکانات دقیق‌تر مانند `integration.jira` یا `sorin.processing`)
 یک سیاست دارد: فعال/غیرفعال، یک بازه شروع/انقضای اختیاری و یک محدودیت نقش
 اختیاری. این به شما امکان می‌دهد یک ماژول را برای مدت محدود آزمایش کنید، آن
 را به نقش‌های خاصی محدود کنید یا بدون تغییر کد فوراً آن را خاموش کنید.
@@ -312,7 +312,7 @@ even users with the module key will be blocked until you re-enable it.""",
         "admin-settings-and-llm", "admin", "Administration", 1,
         "LLM providers, secrets and encrypted storage",
         """Under **Settings**, configure the LLM provider (Anthropic, an
-OpenAI-compatible endpoint, or the local Claude Code CLI), model, token
+Sorin-compatible endpoint, or the local Sorin Code CLI), model, token
 limits and timeout. API keys are encrypted at rest (Fernet key derived from
 `SECRET_KEY`) and only ever shown masked. Change `ADMIN_PASSWORD` and
 `SECRET_KEY` from their defaults before exposing the app to a network — see
@@ -323,7 +323,7 @@ step can be added, edited and toggled here too; every value tokenized this
 way is stored encrypted and is never sent to an LLM.""",
         "ارائه‌دهندگان مدل زبانی، اسرار و ذخیره‌سازی رمزنگاری‌شده",
         """زیر عنوان **تنظیمات**، ارائه‌دهنده مدل زبانی (آنتروپیک، یک نقطه پایانی
-سازگار با OpenAI، یا CLI محلی Claude Code)، مدل، محدودیت توکن و زمان انتظار
+سازگار با Sorin-compatible، یا CLI محلی Sorin Code)، مدل، محدودیت توکن و زمان انتظار
 را پیکربندی کنید. کلیدهای API در حالت سکون رمزگذاری می‌شوند (کلید Fernet
 مشتق‌شده از `SECRET_KEY`) و همیشه فقط به‌صورت پنهان‌شده نمایش داده می‌شوند.
 پیش از در دسترس قرار دادن برنامه روی شبکه، `ADMIN_PASSWORD` و `SECRET_KEY` را

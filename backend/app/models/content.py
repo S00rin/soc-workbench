@@ -25,7 +25,7 @@ class Document(Base, TimestampMixin):
     markdown: Mapped[str] = mapped_column(Text, default="")
     protected_markdown: Mapped[str] = mapped_column(Text, default="")
     optimized_markdown: Mapped[str] = mapped_column(Text, default="")
-    ai_analysis: Mapped[str] = mapped_column(Text, default="")
+    sorin_analysis: Mapped[str] = mapped_column(Text, default="")
 
     summary: Mapped[str] = mapped_column(Text, default="")
     entities: Mapped[dict] = mapped_column(JSON, default=dict)  # keywords, iocs, ips...

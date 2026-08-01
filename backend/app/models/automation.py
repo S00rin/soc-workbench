@@ -1,4 +1,4 @@
-"""Persistent models for intelligence automation and Claude Code tasks."""
+"""Persistent models for intelligence automation and Sorin Code tasks."""
 from __future__ import annotations
 
 from sqlalchemy import Boolean, Float, Integer, String, Text, JSON
@@ -59,11 +59,11 @@ class IoCObservation(Base, TimestampMixin):
     raw_payload: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
-class ClaudeTask(Base, TimestampMixin):
-    __tablename__ = "claude_tasks"
+class SorinTask(Base, TimestampMixin):
+    __tablename__ = "sorin_tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(300), default="Claude Code task")
+    title: Mapped[str] = mapped_column(String(300), default="Sorin Code task")
     prompt: Mapped[str] = mapped_column(Text)
     workspace: Mapped[str] = mapped_column(Text)
     mode: Mapped[str] = mapped_column(String(20), default="read-only")

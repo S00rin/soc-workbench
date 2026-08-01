@@ -28,18 +28,18 @@ class Settings(BaseSettings):
     database_url: str = ""
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     anthropic_api_key: str = ""
-    default_llm_model: str = "claude-opus-4-8"
+    default_llm_model: str = "sorin-opus-4-8"
     llm_max_tokens: int = 4096
     llm_timeout: int = 120
-    openai_base_url: str = ""
-    openai_api_key: str = ""
+    compatible_base_url: str = ""
+    compatible_api_key: str = ""
     atlassian_oauth_client_id: str = ""
     atlassian_oauth_client_secret: str = ""
     atlassian_oauth_redirect_uri: str = "http://localhost:8000/api/atlassian/oauth/callback"
     atlassian_bulk_max_issues: int = 100
     atlassian_history_retention_days: int = 90
-    # Claude Code tasks can only access this directory and its descendants.
-    claude_workspace_root: Path = REPO_ROOT
+    # Sorin Code tasks can only access this directory and its descendants.
+    sorin_workspace_root: Path = REPO_ROOT
 
     @property
     def uploads_dir(self) -> Path: return self.data_dir / "uploads"

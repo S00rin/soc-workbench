@@ -25,7 +25,7 @@ CATEGORY_HINTS = {
     "Splunk": ["splunk", "spl", "search processing"],
     "Detection Engineering": ["detection", "sigma", "yara", "rule"],
     "Incident Response": ["incident", "breach", "forensic", "compromise"],
-    "AI": ["llm", "artificial intelligence", "machine learning", "gpt"],
+    "Sorin": ["llm", "Sorin analysis", "machine learning", "gpt"],
 }
 
 

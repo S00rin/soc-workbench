@@ -60,7 +60,7 @@ const T = {
     capName: "Capability name", capCat: "Category", capDesc: "Description", addCap: "+ Add capability",
     connection: "Confluence connection", space: "Space", parent: "Parent page ID (optional)", publishBtn: "Publish",
     publishScope: "Publishing", wholeProfile: "Full sensor profile", pickConn: "Select a connection…", pickSpace: "Select a space…",
-    open: "Open", noTargets: "No Confluence-enabled connections. Configure one in the Integration Hub first.",
+    open: "Open", noTargets: "No Confluence-enabled connections. Configure one in the Analyzer Hub first.",
   },
   fa: {
     heading: "کتابخانه تجهیزات و سنسورها",

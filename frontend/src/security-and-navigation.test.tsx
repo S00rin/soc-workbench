@@ -26,7 +26,7 @@ describe("safe product shell", () => {
   it("shows only modules allowed by effective backend access", () => {
     render(<MemoryRouter><AccessProvider value={access}><Layout onLogout={vi.fn()}><div>content</div></Layout></AccessProvider></MemoryRouter>);
     expect(screen.getByText("Data & IoCs")).toBeInTheDocument();
-    expect(screen.queryByText("Integration Hub")).not.toBeInTheDocument();
+    expect(screen.queryByText("Analyzer Hub")).not.toBeInTheDocument();
     expect(screen.queryByText("Access & Features")).not.toBeInTheDocument();
     expect(screen.queryByText("Price Analyzer")).not.toBeInTheDocument(); // not in this viewer's granted modules
     expect(screen.getByText("Help Guides")).toBeInTheDocument(); // help has no module gate; always visible

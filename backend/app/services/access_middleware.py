@@ -49,7 +49,7 @@ def specific_features(path: str) -> list[str]:
     if "/bulk" in path:
         features.append("integration.bulk")
     if path.endswith("/analyze") or "/comments/preview" in path:
-        features.append("ai.processing")
+        features.append("sorin.processing")
     return features
 
 
@@ -92,14 +92,14 @@ class ProductAccessMiddleware(BaseHTTPMiddleware):
         started = time.perf_counter()
         response = await call_next(request)
         response.headers["X-Correlation-ID"] = trace_id
-        if context and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if context and not path.startswith("/api/admin/activity"):
             db = SessionLocal()
             try:
                 db.add(UserActivity(
                     tenant_id=context.tenant_id,
                     actor_user_id=context.username,
                     module_key=module,
-                    action=f"{request.method.lower()}:{path}",
+                    action=f"{request.method} {path}",
                     method=request.method,
                     path=path[:500],
                     status_code=response.status_code,

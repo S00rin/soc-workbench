@@ -92,7 +92,7 @@ export default function Splunk() {
       )}
 
       <div className="card">
-        <div className="card-head"><h3>AI analysis</h3></div>
+        <div className="card-head"><h3>Sorin analysis</h3></div>
         <label>Instruction</label>
         <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} style={{ minHeight: 60, fontFamily: "inherit" }} />
         <div className="row mt">

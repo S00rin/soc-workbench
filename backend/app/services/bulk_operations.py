@@ -12,7 +12,7 @@ from ..database import SessionLocal
 from ..models.atlassian import AtlassianConnection, BulkOperation, BulkOperationItem
 from ..security import AuthContext
 from . import jobs, llm
-from .ai_comments import generate_comment, is_similar_comment
+from .sorin_comments import generate_comment, is_similar_comment
 from .atlassian_http import AtlassianError, AtlassianTransport
 from .confluence_provider import ConfluenceProvider
 from .integration_history import audit, record_history, redact_text

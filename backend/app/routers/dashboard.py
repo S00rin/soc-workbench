@@ -18,7 +18,7 @@ def _rows(db: Session, model, limit: int, order):
     return [
         {c.name: getattr(r, c.name) for c in model.__table__.columns
          if c.name not in ("original_text", "markdown", "protected_markdown",
-                           "optimized_markdown", "ai_analysis", "content", "raw")}
+                           "optimized_markdown", "sorin_analysis", "content", "raw")}
         for r in db.query(model).order_by(order).limit(limit).all()
     ]
 

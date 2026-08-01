@@ -71,7 +71,7 @@ Workbench. Publishing is **idempotent**: the stored `confluence_page_id` (or an
 exact title match in the space) is updated in place rather than duplicated. The
 returned page id and URL are saved on the sensor/document and surfaced in the UI.
 
-Reuse an existing Jira/Confluence connection from the **Integration Hub**; the
+Reuse an existing Jira/Confluence connection from the **Analyzer Hub**; the
 same credentials, encryption and permission model apply. No Confluence-enabled
 connection? The publish dialog links you to configure one first.
 

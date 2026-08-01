@@ -34,7 +34,7 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
   const [projects, setProjects] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("sections");
   const [busy, setBusy] = useState(false);
-  const [lastMethod, setLastMethod] = useState<"ai" | "heuristic" | null>(null);
+  const [lastMethod, setLastMethod] = useState<"sorin" | "heuristic" | null>(null);
   const toast = useToast();
 
   async function load() {
@@ -71,7 +71,7 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
 
   const analyze = () => withBusy(async () => {
     const res = await api.post(`/api/price-analyzer/contracts/${contractId}/analyze`, {});
-    setLastMethod(res?.method === "ai" ? "ai" : "heuristic");
+    setLastMethod(res?.method === "sorin" ? "sorin" : "heuristic");
     toast("Contract analyzed", "ok");
     await load();
   });
@@ -190,7 +190,7 @@ export default function PriceAnalyzerWorkspace({ contractId, onBack, onDeleted }
 
 function SectionsTab({ contract, sections, cost, busy, lastMethod, isFa, onAnalyze, onUpdate, onDelete, onAdd }: {
   contract: Contract; sections: Section[]; cost: Cost; busy: boolean;
-  lastMethod: "ai" | "heuristic" | null; isFa: boolean;
+  lastMethod: "sorin" | "heuristic" | null; isFa: boolean;
   onAnalyze: () => void; onUpdate: (s: Section, patch: Partial<Section>) => void; onDelete: (s: Section) => void; onAdd: () => void;
 }) {
   const roles = Object.keys(contract.coefficients?.rates || {});

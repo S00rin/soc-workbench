@@ -1,6 +1,6 @@
 # Atlassian integration setup
 
-The **Integration Hub → Jira & Confluence** page manages Jira and Confluence through one
+The **Analyzer Hub → Jira & Confluence** page manages Jira and Confluence through one
 shared, encrypted connection model. A connection may enable Jira, Confluence,
 or both products when the same Atlassian site and credential has the required
 access.

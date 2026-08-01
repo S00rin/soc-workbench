@@ -54,7 +54,7 @@ def safe_connection(row: AtlassianConnection) -> dict:
         "verify_ssl": row.verify_ssl,
         "timeout": row.timeout,
         "enabled": row.enabled,
-        "ai_enabled": row.ai_enabled,
+        "sorin_enabled": row.sorin_enabled,
         "auto_post_enabled": row.auto_post_enabled,
         "bulk_auto_post_enabled": row.bulk_auto_post_enabled,
         "has_credentials": bool(row.credentials_encrypted),
@@ -106,7 +106,7 @@ def create_or_update(
         row = AtlassianConnection(tenant_id=context.tenant_id, owner_user_id=context.username)
     for key in (
         "name", "products", "deployment_type", "auth_type", "cloud_id", "username", "scopes",
-        "verify_ssl", "timeout", "enabled", "ai_enabled", "auto_post_enabled", "bulk_auto_post_enabled",
+        "verify_ssl", "timeout", "enabled", "sorin_enabled", "auto_post_enabled", "bulk_auto_post_enabled",
     ):
         if key in payload:
             setattr(row, key, payload[key])

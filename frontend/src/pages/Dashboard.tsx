@@ -5,7 +5,7 @@ import { useAccess } from "../access";
 import { Loading, healthBadge, statusBadge, timeAgo } from "../lib";
 
 const QUICK = [
-  { label: "Ask integrations", icon: "AI", to: "/integrations?tab=chat" },
+  { label: "Ask integrations", icon: "Sorin", to: "/integrations?tab=chat" },
   { label: "Upload & analyze", icon: "+", to: "/data?tab=process" },
   { label: "Review IoCs", icon: "IO", to: "/data?tab=iocs" },
   { label: "Integration health", icon: "IN", to: "/integrations?tab=atlassian" },

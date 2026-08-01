@@ -10,7 +10,7 @@ managed from **Access & Features**.
 The compact product navigation groups related screens into these hubs:
 
 - **Data & IoCs**: processing, knowledge, indicators and projects.
-- **Integration Hub**: shared prompt chat, Jira/Confluence administration,
+- **Analyzer Hub**: shared prompt chat, Jira/Confluence administration,
   Wiki.js and Splunk.
 - **Intelligence**: internet intelligence and automation.
 - **Operations**: jobs and notifications.
@@ -47,10 +47,10 @@ Each feature policy has:
 The admin UI includes 7, 30 and 90 day presets plus unlimited duration. An
 expired or scheduled feature returns an actionable `403 feature_unavailable`
 response from the backend. Provider policies are independent: Jira,
-Confluence, Wiki.js, Splunk, integration chat, bulk operations and AI processing
+Confluence, Wiki.js, Splunk, integration chat, bulk operations and Sorin processing
 can be scheduled separately.
 
-Disabling **AI Processing** or disabling AI on a connection prevents connector
+Disabling **Sorin Processing** or disabling Sorin on a connection prevents connector
 content and prompts from being sent to the configured model. Read-only fallback
 search and deterministic summaries remain available where practical.
 
@@ -63,7 +63,7 @@ is enabled. In Wiki.js:
 2. Create a new API key with the group and expiry appropriate for this
    deployment.
 3. Grant that group view permission for only the required pages/locales.
-4. In SOC Workbench open **Integration Hub → Wiki.js → Add Wiki.js**.
+4. In SOC Workbench open **Analyzer Hub → Wiki.js → Add Wiki.js**.
 5. Enter the Wiki.js base URL, paste the token once, keep TLS verification on,
    save, and run **Test & permissions**.
 

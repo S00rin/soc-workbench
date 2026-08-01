@@ -1,4 +1,4 @@
-"""Constrained Claude Code runner for explicitly allow-listed workspaces."""
+"""Constrained Sorin Code runner for explicitly allow-listed workspaces."""
 from __future__ import annotations
 
 import json
@@ -10,9 +10,9 @@ from pathlib import Path
 
 from ..config import get_settings
 from ..database import SessionLocal
-from ..models.automation import ClaudeTask
+from ..models.automation import SorinTask
 
-_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="claude-task")
+_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sorin-task")
 
 
 def _now() -> str:
@@ -21,7 +21,7 @@ def _now() -> str:
 
 def _allowed_workspace(path: str) -> Path:
     settings = get_settings()
-    root = Path(getattr(settings, "claude_workspace_root", "") or settings.data_dir.parent).resolve()
+    root = Path(getattr(settings, "sorin_workspace_root", "") or settings.data_dir.parent).resolve()
     workspace = Path(path).expanduser().resolve()
     if workspace != root and root not in workspace.parents:
         raise ValueError(f"Workspace must be inside allow-listed root: {root}")
@@ -43,13 +43,13 @@ def _git_files(workspace: Path) -> set[str]:
 
 def execute(task_id: int) -> None:
     db = SessionLocal()
-    task = db.get(ClaudeTask, task_id)
+    task = db.get(SorinTask, task_id)
     if not task:
         db.close()
         return
     try:
         workspace = _allowed_workspace(task.workspace)
-        exe = shutil.which("claude") or "claude"
+        exe = shutil.which("sorin") or "sorin"
         tools = {
             "plan": "Read,Grep,Glob",
             "read-only": "Read,Grep,Glob",
@@ -91,7 +91,7 @@ def execute(task_id: int) -> None:
         task.changed_files = sorted(_git_files(workspace) - before)
     except subprocess.TimeoutExpired as exc:
         task.status = "failed"
-        task.error = f"Claude Code timed out after {exc.timeout}s"
+        task.error = f"Sorin Code timed out after {exc.timeout}s"
     except Exception as exc:
         task.status = "failed"
         task.error = str(exc)

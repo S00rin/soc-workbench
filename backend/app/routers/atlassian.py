@@ -23,7 +23,7 @@ from ..models.atlassian import (
 )
 from ..security import AuthContext, get_auth_context, require_admin
 from ..services import llm
-from ..services.ai_comments import generate_comment, is_similar_comment
+from ..services.sorin_comments import generate_comment, is_similar_comment
 from ..services import bulk_operations
 from ..services.atlassian_connections import (
     create_or_update, oauth_authorization_url, oauth_callback, safe_connection, scoped_connection,
@@ -53,7 +53,7 @@ class ConnectionIn(BaseModel):
     verify_ssl: bool = True
     timeout: int = Field(default=30, ge=5, le=180)
     enabled: bool = True
-    ai_enabled: bool = True
+    sorin_enabled: bool = True
     auto_post_enabled: bool = False
     bulk_auto_post_enabled: bool = False
 
@@ -450,8 +450,8 @@ def jira_search(connection_id: int, payload: JiraSearchIn, db: Session = Depends
 @router.post("/connections/{connection_id}/jira/issues/{issue_key}/comments/preview")
 def preview_jira_comment(connection_id: int, issue_key: str, payload: CommentPreviewIn, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
     connection = scoped_connection(db, context, connection_id)
-    if not connection.ai_enabled:
-        raise HTTPException(403, {"code": "ai_disabled", "message": "AI processing is disabled for this connection."})
+    if not connection.sorin_enabled:
+        raise HTTPException(403, {"code": "sorin_disabled", "message": "Sorin processing is disabled for this connection."})
     transport, provider = _provider(db, connection, "jira")
     try:
         issue_context = provider.issue_context(issue_key)
@@ -606,8 +606,8 @@ def confluence_page(connection_id: int, page_id: str, db: Session = Depends(get_
 @router.post("/connections/{connection_id}/confluence/pages/{page_id}/comments/preview")
 def preview_confluence_comment(connection_id: int, page_id: str, payload: CommentPreviewIn, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
     connection = scoped_connection(db, context, connection_id)
-    if not connection.ai_enabled:
-        raise HTTPException(403, {"code": "ai_disabled", "message": "AI processing is disabled for this connection."})
+    if not connection.sorin_enabled:
+        raise HTTPException(403, {"code": "sorin_disabled", "message": "Sorin processing is disabled for this connection."})
     transport, provider = _provider(db, connection, "confluence")
     try:
         page_context = provider.page_context(page_id)

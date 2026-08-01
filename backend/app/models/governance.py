@@ -66,7 +66,7 @@ class ExternalConnection(Base, TimestampMixin):
     verify_ssl: Mapped[bool] = mapped_column(Boolean, default=True)
     timeout: Mapped[int] = mapped_column(Integer, default=30)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    sorin_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error_code: Mapped[str] = mapped_column(String(80), default="")

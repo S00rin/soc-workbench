@@ -74,18 +74,18 @@ into an editable, priced project plan:
 
 ## Using it without an API key
 
-The analyzer's AI split uses the shared `services/llm` provider layer, so it
+The analyzer's Sorin split uses the shared `services/llm` provider layer, so it
 works with a subscription-based local CLI agent and **no API key**:
 
-- **Claude Code Pro** → set provider `claude_cli` in Settings → LLM (requires
-  Claude Code installed and signed in). Model can be an alias (`opus` /
+- **Sorin Code Pro** → set provider `sorin_cli` in Settings → LLM (requires
+  Sorin Code installed and signed in). Model can be an alias (`opus` /
   `sonnet` / `haiku`).
-- **ChatGPT Codex** → set provider `codex_cli` (requires the Codex CLI
+- **Sorin Codex** → set provider `codex_cli` (requires the Codex CLI
   installed and `codex login` completed).
 
 Both shell out to the local agent with your existing subscription auth, feed
 the prompt on stdin, and run in a temp dir so nothing touches your project.
-The API-key providers (`anthropic`, `openai`) remain available.
+The API-key providers (`anthropic`, `sorin_compatible`) remain available.
 
 ## Farsi PDF export
 
@@ -100,7 +100,7 @@ producing broken text. Excel export has no such requirement.
 
 ## No LLM configured?
 
-The `Analyze contract` action still works without any AI provider.
+The `Analyze contract` action still works without any Sorin provider.
 `split_sections_heuristic` in `app/services/price_analyzer.py` does real
 structural analysis rather than a naive split:
 
@@ -121,4 +121,4 @@ It is still a first draft to edit, not a final estimate — and the UI shows a
 hint after an offline analysis pointing to Settings → LLM for sharper
 extraction. When an LLM *is* configured, the same keyword inference repairs
 any category/role the model omits or mislabels, and the response's `method`
-field (`ai` vs `heuristic`) tells the UI which path ran.
+field (`sorin` vs `heuristic`) tells the UI which path ran.

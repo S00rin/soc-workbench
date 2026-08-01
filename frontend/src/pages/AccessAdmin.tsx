@@ -12,14 +12,14 @@ type Feature = {
   starts_at?: string | null; expires_at?: string | null; allowed_roles?: string[]; config?: Record<string, unknown>;
 };
 
-export default function AccessAdmin() {
-  const [tab, setTab] = useState<"users" | "features" | "activity">("users");
+export default function AccessAdmin({ initialTab = "users" }: { initialTab?: "users" | "features" | "activity" }) {
+  const [tab, setTab] = useState<"users" | "features" | "activity">(initialTab);
   return <>
     <div className="page-intro"><div><h1>Access & Feature Control</h1><p>Create users, limit module access and schedule when product features start or expire.</p></div></div>
     <div className="tabs hub-tabs">
       <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>Users & roles</button>
       <button className={`tab ${tab === "features" ? "active" : ""}`} onClick={() => setTab("features")}>Feature availability</button>
-      <button className={`tab ${tab === "activity" ? "active" : ""}`} onClick={() => setTab("activity")}>Activity history</button>
+      <button className={`tab ${tab === "activity" ? "active" : ""}`} onClick={() => setTab("activity")}>Audit Log</button>
     </div>
     {tab === "users" && <UsersPanel />}
     {tab === "features" && <FeaturesPanel />}
@@ -145,12 +145,18 @@ function ActivityPanel() {
   const [value, setValue] = useState<any>(null);
   const [actor, setActor] = useState("");
   const [module, setModule] = useState("");
-  async function load() {
+  const [action, setAction] = useState("");
+  const [status, setStatus] = useState("");
+  function queryString() {
     const query = new URLSearchParams({ page_size: "100" });
     if (actor) query.set("actor", actor); if (module) query.set("module", module);
-    setValue(await api.get(`/api/admin/activity?${query}`));
+    if (action) query.set("action", action); if (status) query.set("status", status);
+    return query;
+  }
+  async function load() {
+    setValue(await api.get(`/api/admin/activity?${queryString()}`));
   }
   useEffect(() => { load().catch(error => toast(error.message, "error")); }, []);
   if (!value) return <Loading />;
-  return <div className="card table-card"><div className="card-head"><h3>{value.total} recorded action(s)</h3><div className="row"><input style={{ width: 180 }} placeholder="User" value={actor} onChange={event => setActor(event.target.value)} /><input style={{ width: 180 }} placeholder="Module" value={module} onChange={event => setModule(event.target.value)} /><button className="btn-sm" onClick={load}>Filter</button></div></div><table className="data"><thead><tr><th>Time</th><th>User</th><th>Module</th><th>Action</th><th>Status</th><th>Trace</th></tr></thead><tbody>{value.items.map((row: any) => <tr key={row.id}><td>{timeAgo(row.created_at)}</td><td>{row.actor_user_id}</td><td><span className="badge">{row.module_key}</span></td><td className="mono">{row.action}</td><td><span className={`badge ${row.status_code < 400 ? "green" : "red"}`}>{row.status_code}</span></td><td className="mono faint">{row.correlation_id?.slice(0, 10)}</td></tr>)}</tbody></table></div>;
+  return <div className="card table-card"><div className="card-head"><div><h3>Audit Log</h3><span className="dim">{value.total} traceable product event(s)</span></div><div className="row"><input style={{ width: 150 }} placeholder="User" value={actor} onChange={event => setActor(event.target.value)} /><input style={{ width: 150 }} placeholder="Module" value={module} onChange={event => setModule(event.target.value)} /><input style={{ width: 180 }} placeholder="Action" value={action} onChange={event => setAction(event.target.value)} /><select style={{ width: 120 }} value={status} onChange={event => setStatus(event.target.value)}><option value="">All status</option><option value="success">Success</option><option value="failed">Failed</option></select><button className="btn-sm" onClick={load}>Filter</button><button className="btn-sm" onClick={() => api.download(`/api/admin/activity-export.csv?${queryString()}`, "audit-log.csv")}>Export CSV</button></div></div><table className="data"><thead><tr><th>Time</th><th>User</th><th>Module</th><th>Action</th><th>Status</th><th>Trace ID</th></tr></thead><tbody>{value.items.map((row: any) => <tr key={row.id}><td>{timeAgo(row.created_at)}</td><td>{row.actor_user_id}</td><td><span className="badge">{row.module_key}</span></td><td className="mono">{row.action}</td><td><span className={`badge ${row.status_code < 400 ? "green" : "red"}`}>{row.status_code < 400 ? "success" : "failed"}</span></td><td className="mono faint">{row.correlation_id}</td></tr>)}</tbody></table></div>;
 }

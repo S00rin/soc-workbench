@@ -27,7 +27,7 @@ app_settings = get_settings()
 
 LLM_KEYS = (
     "llm_provider", "llm_model", "llm_base_url", "llm_max_tokens",
-    "llm_temperature", "llm_timeout", "llm_api_key", "claude_cli_path", "codex_cli_path",
+    "llm_temperature", "llm_timeout", "llm_api_key", "sorin_cli_path", "codex_cli_path",
 )
 
 
@@ -205,7 +205,7 @@ def analyze_contract(contract_id: int, db: Session = Depends(get_db), user: str 
     if cfg.has_credentials:
         try:
             raw_sections = pa.split_sections_with_llm(contract.source_text, contract.language, coefficients, cfg)
-            method = "ai"
+            method = "sorin"
         except (llm.LLMError, pa.AnalysisError) as e:
             logger.warning("LLM contract split failed, falling back to heuristic: %s", e)
     if raw_sections is None:

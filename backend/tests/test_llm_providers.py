@@ -1,4 +1,4 @@
-"""Tests for local-CLI LLM providers (Claude Code / Codex) that need no API key."""
+"""Tests for local-CLI LLM providers (Sorin Code / Codex) that need no API key."""
 from __future__ import annotations
 
 import sys
@@ -10,7 +10,7 @@ from app.services import llm
 
 
 def test_cli_providers_need_no_api_key():
-    assert llm.LLMConfig(provider="claude_cli", model="", api_key="").has_credentials
+    assert llm.LLMConfig(provider="sorin_cli", model="", api_key="").has_credentials
     assert llm.LLMConfig(provider="codex_cli", model="", api_key="").has_credentials
     # API-based providers still require a key.
     assert not llm.LLMConfig(provider="anthropic", model="", api_key="").has_credentials
@@ -34,10 +34,10 @@ def test_codex_command_omits_model_when_blank():
 def test_config_from_settings_carries_both_cli_paths():
     cfg = llm.config_from_settings({
         "llm_provider": "codex_cli",
-        "claude_cli_path": "/opt/claude",
+        "sorin_cli_path": "/opt/sorin",
         "codex_cli_path": "/opt/codex",
     })
     assert cfg.provider == "codex_cli"
-    assert cfg.claude_cli_path == "/opt/claude"
+    assert cfg.sorin_cli_path == "/opt/sorin"
     assert cfg.codex_cli_path == "/opt/codex"
     assert cfg.has_credentials  # codex_cli needs no key

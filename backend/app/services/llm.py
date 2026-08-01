@@ -1,6 +1,6 @@
 """LLM provider adapter (Module 4 / Module 15).
 
-Default provider: Anthropic. An OpenAI-compatible endpoint is also supported.
+Default provider: Anthropic. An Sorin-compatible endpoint is also supported.
 Secrets come from the Settings store (encrypted) or environment; they are never
 logged. Callers are responsible for showing the protected preview BEFORE calling.
 """
@@ -21,24 +21,24 @@ class LLMError(Exception):
     pass
 
 
-CLI_PROVIDERS = {"claude_cli", "codex_cli"}
+CLI_PROVIDERS = {"sorin_cli", "codex_cli"}
 
 
 @dataclass
 class LLMConfig:
-    provider: str  # anthropic | openai | claude_cli | codex_cli
+    provider: str  # anthropic | sorin_compatible | sorin_cli | codex_cli
     model: str
     api_key: str
     base_url: str = ""
     max_tokens: int = 4096
     temperature: float = 0.3
     timeout: int = 120
-    claude_cli_path: str = ""  # optional explicit path to the `claude` binary
+    sorin_cli_path: str = ""  # optional explicit path to the `sorin` binary
     codex_cli_path: str = ""  # optional explicit path to the `codex` binary
 
     @property
     def has_credentials(self) -> bool:
-        """Local CLI agents (Claude Code / Codex) use their own subscription
+        """Local CLI agents (Sorin Code / Codex) use their own subscription
         auth, so they need no api_key."""
         return self.provider in CLI_PROVIDERS or bool(self.api_key)
 
@@ -63,12 +63,12 @@ def config_from_settings(overrides: dict | None = None) -> LLMConfig:
     return LLMConfig(
         provider=provider,
         model=o.get("llm_model") or s.default_llm_model,
-        api_key=o.get("llm_api_key") or s.anthropic_api_key or s.openai_api_key,
-        base_url=o.get("llm_base_url") or s.openai_base_url,
+        api_key=o.get("llm_api_key") or s.anthropic_api_key or s.compatible_api_key,
+        base_url=o.get("llm_base_url") or s.compatible_base_url,
         max_tokens=int(o.get("llm_max_tokens") or s.llm_max_tokens),
         temperature=float(o.get("llm_temperature") or 0.3),
         timeout=int(o.get("llm_timeout") or s.llm_timeout),
-        claude_cli_path=o.get("claude_cli_path", ""),
+        sorin_cli_path=o.get("sorin_cli_path", ""),
         codex_cli_path=o.get("codex_cli_path", ""),
     )
 
@@ -78,24 +78,24 @@ def complete(system: str, user: str, cfg: LLMConfig) -> LLMResult:
     if not cfg.has_credentials:
         raise LLMError(
             "No LLM credentials configured. Set an API key in Settings → LLM, or "
-            "select the 'claude_cli' (Claude Code) or 'codex_cli' (ChatGPT Codex) "
+            "select the 'sorin_cli' (Sorin Code) or 'codex_cli' (Sorin Codex) "
             "provider to use a local CLI agent with your existing subscription."
         )
     logger.info("LLM call provider=%s model=%s (~%d input tokens)",
                 cfg.provider, cfg.model, estimate_tokens(system + user))
-    if cfg.provider == "claude_cli":
-        return _claude_cli(system, user, cfg)
+    if cfg.provider == "sorin_cli":
+        return _sorin_cli(system, user, cfg)
     if cfg.provider == "codex_cli":
         return _codex_cli(system, user, cfg)
     if cfg.provider == "anthropic":
         return _anthropic(system, user, cfg)
-    return _openai_compatible(system, user, cfg)
+    return _compatible(system, user, cfg)
 
 
-def _claude_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
-    """Run the completion through the local Claude Code CLI (`claude -p`).
+def _sorin_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
+    """Run the completion through the local Sorin Code CLI (`sorin -p`).
 
-    Uses the user's existing Claude Code authentication instead of an API key.
+    Uses the user's existing Sorin Code authentication instead of an API key.
     The prompt is fed on stdin (not argv) so large documents don't hit the
     command-line length limit. Runs in a temp dir with dynamic project-context
     sections disabled so it behaves like a plain completion, not a repo agent.
@@ -105,15 +105,15 @@ def _claude_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
     import subprocess
     import tempfile
 
-    exe = cfg.claude_cli_path.strip() or shutil.which("claude") or "claude"
+    exe = cfg.sorin_cli_path.strip() or shutil.which("sorin") or "sorin"
     # Run as a plain completion, not a repo coding-agent: disable all tools, load
-    # no MCP servers, and skip the user's setting sources (hooks / CLAUDE.md /
+    # no MCP servers, and skip the user's setting sources (hooks / SORIN.md /
     # plugins) so nothing local leaks into the analysis.
     cmd = [
         exe, "-p", "--output-format", "json",
         "--strict-mcp-config",
         "--tools", "",
-        "--setting-sources", "",  # load no CLAUDE.md / hooks / user memory
+        "--setting-sources", "",  # load no SORIN.md / hooks / user memory
     ]
     if system:
         cmd += ["--system-prompt", system, "--exclude-dynamic-system-prompt-sections"]
@@ -133,30 +133,30 @@ def _claude_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
         )
     except FileNotFoundError as e:
         raise LLMError(
-            f"Claude Code CLI not found ('{exe}'). Install Claude Code, or set "
-            "'claude_cli_path' in Settings → LLM to its full path."
+            f"Sorin Code CLI not found ('{exe}'). Install Sorin Code, or set "
+            "'sorin_cli_path' in Settings → LLM to its full path."
         ) from e
     except subprocess.TimeoutExpired as e:
-        raise LLMError(f"Claude Code CLI timed out after {cfg.timeout}s.") from e
+        raise LLMError(f"Sorin Code CLI timed out after {cfg.timeout}s.") from e
 
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip()[:500]
-        raise LLMError(f"Claude Code CLI failed (exit {proc.returncode}): {detail}")
+        raise LLMError(f"Sorin Code CLI failed (exit {proc.returncode}): {detail}")
 
     try:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError as e:
-        raise LLMError(f"Could not parse Claude Code output: {proc.stdout[:300]}") from e
+        raise LLMError(f"Could not parse Sorin Code output: {proc.stdout[:300]}") from e
 
     if data.get("is_error"):
-        raise LLMError(f"Claude Code error: {data.get('result') or data.get('subtype')}")
+        raise LLMError(f"Sorin Code error: {data.get('result') or data.get('subtype')}")
 
     text = data.get("result", "")
     usage = data.get("usage") or {}
-    model_name = model or "claude-code"
+    model_name = model or "sorin-code"
     model_usage = data.get("modelUsage")
     if isinstance(model_usage, dict) and model_usage:
-        # Report the model that produced the most output; Claude Code may also
+        # Report the model that produced the most output; Sorin Code may also
         # invoke a small helper model for internal steps.
         model_name = max(
             model_usage,
@@ -182,9 +182,9 @@ def _build_codex_command(exe: str, model: str) -> list[str]:
 
 
 def _codex_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
-    """Run the completion through the local OpenAI Codex CLI (`codex exec`).
+    """Run the completion through the local Sorin-compatible Codex CLI (`codex exec`).
 
-    Uses the user's existing ChatGPT/Codex subscription auth instead of an API
+    Uses the user's existing Sorin/Codex subscription auth instead of an API
     key. The combined prompt is fed on stdin so large documents don't hit the
     command-line length limit, and it runs in a temp dir so it never touches
     the project. Best-effort: requires the `codex` CLI to be installed and
@@ -211,7 +211,7 @@ def _codex_cli(system: str, user: str, cfg: LLMConfig) -> LLMResult:
         )
     except FileNotFoundError as e:
         raise LLMError(
-            f"Codex CLI not found ('{exe}'). Install it (npm i -g @openai/codex), run "
+            f"Codex CLI not found ('{exe}'). Install the Codex CLI, run "
             "'codex login', or set 'codex_cli_path' in Settings → LLM to its full path."
         ) from e
     except subprocess.TimeoutExpired as e:
@@ -259,8 +259,10 @@ def _anthropic(system: str, user: str, cfg: LLMConfig) -> LLMResult:
     )
 
 
-def _openai_compatible(system: str, user: str, cfg: LLMConfig) -> LLMResult:
-    base = cfg.base_url.rstrip("/") or "https://api.openai.com/v1"
+def _compatible(system: str, user: str, cfg: LLMConfig) -> LLMResult:
+    base = cfg.base_url.rstrip("/")
+    if not base:
+        raise LLMError("No compatible endpoint URL configured in Settings.")
     url = f"{base}/chat/completions"
     payload = {
         "model": cfg.model,

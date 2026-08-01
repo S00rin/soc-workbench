@@ -150,7 +150,7 @@ class UpdateDocRequest(BaseModel):
     markdown: str | None = None
     protected_markdown: str | None = None
     optimized_markdown: str | None = None
-    ai_analysis: str | None = None
+    sorin_analysis: str | None = None
     summary: str | None = None
 
 
