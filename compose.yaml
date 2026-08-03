@@ -1,0 +1,32 @@
+services:
+  soc-workbench:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-0.4.0}
+    image: ${SOC_IMAGE:-soorin/soc-workbench:0.4.0}
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATA_DIR: /opt/soc/data
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+    ports:
+      - "${SOC_PORT:-8000}:8000"
+    volumes:
+      - soc_data:/opt/soc/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+volumes:
+  soc_data:
+    name: ${SOC_DATA_VOLUME:-soc-workbench-data}

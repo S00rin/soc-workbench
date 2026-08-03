@@ -34,6 +34,9 @@ an SQLite backing store.
 - **Atlassian integrations** — tenant-scoped Jira and Confluence connections,
   dynamic Jira field mapping, permission tests, redacted query history, smart
   comment approval, and controlled bulk jobs.
+- **SOC KPI and report templates** — daily, weekly, monthly and shift-handover
+  Jira report prompts plus backlog, resolution, MTTR, SLA, priority, assignment
+  and overdue metrics. Optional Jira timestamp fields unlock MTTA and MTTD.
 - **Unified integration chat** — ask Jira, Confluence, Wiki.js and Splunk in
   natural language, edit the generated read-only query, continue with follow-up
   prompts, and reopen the redacted conversation history.
@@ -136,13 +139,22 @@ cd ../backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
 When `frontend/dist/index.html` exists, the backend serves the SPA for all
 non-`/api` routes.
 
-## Docker (backend)
+## Docker customer image
 
 ```bash
-cd backend
-docker build -t soc-workbench .
-docker run -p 8000:8000 --env-file ../.env soc-workbench
+cp .env.example .env
+# Set strong ADMIN_PASSWORD and SECRET_KEY values in .env first.
+docker compose build
+docker compose up -d
+docker compose ps
 ```
+
+The multi-stage image serves the full product and excludes proprietary `.py`,
+`.ts` and `.tsx` source from the final stage. It runs as a non-root user with a
+read-only filesystem and a persistent data volume. See
+[customer Docker deployment](docs/CUSTOMER_DEPLOYMENT.md) for image inspection,
+private-registry delivery, backups, upgrades, and the limits of on-premises
+source protection.
 
 ## Configuration
 
