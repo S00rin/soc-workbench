@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     logger.info("%s shutting down", app_settings.app_name)
 
 
-app = FastAPI(title=app_settings.app_name, version="0.3.0", lifespan=lifespan)
+app = FastAPI(title=app_settings.app_name, version="0.4.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_settings.cors_origin_list,
@@ -71,7 +71,7 @@ for module in (
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "app": app_settings.app_name, "version": "0.3.0"}
+    return {"status": "ok", "app": app_settings.app_name, "version": "0.4.0"}
 
 
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

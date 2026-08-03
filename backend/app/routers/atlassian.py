@@ -34,6 +34,10 @@ from ..services.field_mapping import (
     INTERNAL_FIELDS, metadata_version, preview_mapping, resolve_mappings, validate_definition,
 )
 from ..services.integration_history import audit, correlation_id, record_history
+from ..services.jira_kpis import (
+    REPORT_TEMPLATES, calculate_soc_kpis, render_markdown_report,
+    render_template_jql, report_template,
+)
 from ..services.jira_provider import JiraProvider, adf_to_text
 from ..services.settings_service import get_all_resolved
 
@@ -83,6 +87,21 @@ class MappingPreviewIn(BaseModel):
 class JiraSearchIn(BaseModel):
     jql: str = Field(min_length=1, max_length=10000)
     max_results: int = Field(default=50, ge=1, le=500)
+
+
+class JiraKPIIn(JiraSearchIn):
+    sla_target_hours: float = Field(default=24, gt=0, le=8760)
+    acknowledgement_field: str = Field(default="", pattern=r"^[A-Za-z0-9_.-]*$", max_length=160)
+    detection_field: str = Field(default="", pattern=r"^[A-Za-z0-9_.-]*$", max_length=160)
+
+
+class JiraReportIn(BaseModel):
+    template_id: str = Field(min_length=1, max_length=80)
+    project_key: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,39}$")
+    max_results: int = Field(default=500, ge=1, le=500)
+    sla_target_hours: float = Field(default=24, gt=0, le=8760)
+    acknowledgement_field: str = Field(default="", pattern=r"^[A-Za-z0-9_.-]*$", max_length=160)
+    detection_field: str = Field(default="", pattern=r"^[A-Za-z0-9_.-]*$", max_length=160)
 
 
 class CommentPreviewIn(BaseModel):
@@ -445,6 +464,100 @@ def jira_search(connection_id: int, payload: JiraSearchIn, db: Session = Depends
         transport.close()
     record_history(db, context, connection_id=connection_id, product="jira", operation_type="search", query_type="jql", query=payload.jql, final_query=payload.jql, target_keys=[item.get("key", "") for item in issues], result_summary=f"{len(issues)} issues returned", status=status, duration_ms=int((time.perf_counter() - started) * 1000), result_count=len(issues), trace_id=trace)
     return {"issues": issues, "total": result.get("total", len(issues)), "correlation_id": trace}
+
+
+@router.get("/report-templates")
+def jira_report_templates(context: AuthContext = Depends(get_auth_context)):
+    """Return version-controlled default prompts used by the KPI workspace."""
+    return REPORT_TEMPLATES
+
+
+def _kpi_fields(payload: JiraKPIIn | JiraReportIn) -> list[str]:
+    fields = [
+        "summary", "status", "assignee", "priority", "project", "issuetype",
+        "created", "updated", "resolutiondate", "duedate",
+    ]
+    for item in (payload.acknowledgement_field, payload.detection_field):
+        if item and item not in fields:
+            fields.append(item)
+    return fields
+
+
+def _calculate_connection_kpis(
+    db: Session, context: AuthContext, connection: AtlassianConnection,
+    payload: JiraKPIIn | JiraReportIn, jql: str,
+) -> tuple[dict, dict, str, int]:
+    trace = correlation_id()
+    started = time.perf_counter()
+    transport, provider = _provider(db, connection, "jira")
+    try:
+        search_result = provider.search(jql, payload.max_results, fields=_kpi_fields(payload))
+    except AtlassianError as error:
+        record_history(
+            db, context, connection_id=connection.id, product="jira", operation_type="kpi",
+            query_type="jql", query=jql, final_query=jql, status="failed",
+            duration_ms=int((time.perf_counter() - started) * 1000), error_code=error.code,
+            error_summary=error.message, trace_id=trace,
+        )
+        raise _error(error) from error
+    finally:
+        transport.close()
+    issues = search_result.get("issues", [])
+    result = calculate_soc_kpis(
+        issues, sla_target_hours=payload.sla_target_hours,
+        acknowledgement_field=payload.acknowledgement_field,
+        detection_field=payload.detection_field,
+    )
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    return result, search_result, trace, duration_ms
+
+
+@router.post("/connections/{connection_id}/jira/kpis")
+def jira_kpis(connection_id: int, payload: JiraKPIIn, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    connection = scoped_connection(db, context, connection_id)
+    if "jira" not in (connection.products or []):
+        raise HTTPException(422, {"code": "jira_not_enabled", "message": "Jira is not enabled for this connection."})
+    result, search_result, trace, duration_ms = _calculate_connection_kpis(db, context, connection, payload, payload.jql)
+    issue_count = len(search_result.get("issues", []))
+    record_history(
+        db, context, connection_id=connection_id, product="jira", operation_type="kpi",
+        query_type="jql", query=payload.jql, final_query=payload.jql,
+        result_summary=f"Calculated SOC KPIs from {issue_count} Jira issues", status="success",
+        duration_ms=duration_ms, result_count=issue_count, trace_id=trace,
+        metadata={"sla_target_hours": payload.sla_target_hours, "jira_total": search_result.get("total", issue_count)},
+    )
+    audit(db, context, "jira.kpi.calculate", "connection", str(connection_id), connection_id=connection_id, trace_id=trace, details={"issue_count": issue_count, "sla_target_hours": payload.sla_target_hours})
+    return {**result, "jql": payload.jql, "jira_total": search_result.get("total", issue_count), "correlation_id": trace}
+
+
+@router.post("/connections/{connection_id}/jira/reports")
+def jira_report(connection_id: int, payload: JiraReportIn, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    connection = scoped_connection(db, context, connection_id)
+    if "jira" not in (connection.products or []):
+        raise HTTPException(422, {"code": "jira_not_enabled", "message": "Jira is not enabled for this connection."})
+    try:
+        template = report_template(payload.template_id)
+        jql = render_template_jql(payload.template_id, payload.project_key)
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error
+    result, search_result, trace, duration_ms = _calculate_connection_kpis(db, context, connection, payload, jql)
+    issue_count = len(search_result.get("issues", []))
+    jira_total = search_result.get("total", issue_count)
+    result["jira_total"] = jira_total
+    markdown = render_markdown_report(template, payload.project_key, result)
+    record_history(
+        db, context, connection_id=connection_id, product="jira", operation_type="soc_report",
+        query_type="report_template", prompt=template["prompt"], query=jql, final_query=jql,
+        result_summary=markdown, status="success", duration_ms=duration_ms,
+        result_count=issue_count, trace_id=trace,
+        metadata={"template_id": payload.template_id, "project_key": payload.project_key.upper(), "sla_target_hours": payload.sla_target_hours, "jira_total": jira_total},
+    )
+    audit(db, context, "jira.report.generate", "connection", str(connection_id), connection_id=connection_id, trace_id=trace, details={"template_id": payload.template_id, "project_key": payload.project_key.upper(), "issue_count": issue_count})
+    return {
+        "template": template, "project_key": payload.project_key.upper(), "jql": jql,
+        "report_markdown": markdown, "kpis": result,
+        "jira_total": jira_total, "correlation_id": trace,
+    }
 
 
 @router.post("/connections/{connection_id}/jira/issues/{issue_key}/comments/preview")

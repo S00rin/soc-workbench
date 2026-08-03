@@ -81,6 +81,28 @@ and `adf`. No executable user code is accepted. **Preview** applies the effectiv
 connection → project → issue-type precedence to sample internal data before it
 is saved or used.
 
+## SOC reports and KPI
+
+Open **Analyzer Hub → Jira & Confluence → KPI**. The workspace includes
+version-controlled prompts and JQL for daily operations, weekly performance,
+monthly executive review and shift handover. Enter a Jira project key, choose
+the report and set the resolution SLA target. The generated Markdown is ready
+to download or copy into Confluence. Every execution records its JQL, redacted
+prompt, outcome and correlation ID in Integration History and Audit Log.
+
+The calculations cover issue volume, resolved/open backlog, resolution rate,
+MTTR and median resolution time, SLA compliance, mean open age, high/critical
+volume, assignment coverage, unassigned work, overdue issues and status/priority
+distributions. Jira processing is capped at 500 issues per run; narrow the
+project/time JQL when the reported Jira total is higher than the processed count.
+
+MTTA and MTTD require organization-specific timestamps. Expand **Advanced KPI
+field mapping** and enter the Jira custom field IDs containing acknowledgement
+and detection/event times. When those fields or valid timestamps are absent,
+the UI reports `N/A` and a data-quality reason instead of manufacturing a value.
+MTTR uses Jira `created` and `resolutiondate`; SLA compliance compares resolved
+duration with the selected target.
+
 ## Smart and bulk comments
 
 Single-item comment generation reads the actual Jira issue or Confluence page

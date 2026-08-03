@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { Loading, Modal, useToast } from "../lib";
+import { Loading, Markdown, Modal, useToast } from "../lib";
 import "./Atlassian.css";
 
 type Product = "jira" | "confluence";
@@ -13,12 +13,12 @@ type Connection = {
   last_error_code?: string; last_error_summary?: string;
 };
 
-const TABS = ["connections", "jira", "confluence", "mapping", "history", "bulk"] as const;
+const TABS = ["connections", "jira", "kpi", "confluence", "mapping", "history", "bulk"] as const;
 type Tab = typeof TABS[number];
 
 const tabLabels: Record<Tab, string> = {
   connections: "Connections", jira: "Jira", confluence: "Confluence",
-  mapping: "Field Mapping", history: "Query & Prompt History", bulk: "Bulk Operations",
+  kpi: "KPI", mapping: "Field Mapping", history: "Query & Prompt History", bulk: "Bulk Operations",
 };
 
 export default function Atlassian() {
@@ -52,6 +52,7 @@ export default function Atlassian() {
     {tab === "connections" && <ConnectionsPanel rows={connections} onChanged={loadConnections} />}
     {tab !== "connections" && !selected && <div className="card empty">Create an Atlassian connection first.</div>}
     {tab === "jira" && selected && <JiraWorkspace connection={selected} />}
+    {tab === "kpi" && selected && <KPIWorkspace connection={selected} />}
     {tab === "confluence" && selected && <ConfluenceWorkspace connection={selected} />}
     {tab === "mapping" && selected && <MappingPanel connection={selected} />}
     {tab === "history" && <HistoryPanel connections={connections} />}
@@ -182,6 +183,108 @@ function JiraWorkspace({ connection }: { connection: Connection }) {
     {issues && <div className="card"><div className="card-head"><h3>{issues.length} issue(s)</h3></div>{issues.length === 0 ? <div className="empty">No issues matched.</div> : <table className="data"><thead><tr><th>Key</th><th>Summary</th><th>Status</th><th>Priority</th><th></th></tr></thead><tbody>{issues.map((issue) => <tr key={issue.key}><td className="mono">{issue.key}</td><td>{issue.fields?.summary}</td><td><span className="badge">{issue.fields?.status?.name}</span></td><td>{issue.fields?.priority?.name || "—"}</td><td><button className="btn-sm" onClick={() => setCommentIssue(issue.key)}>Smart comment</button></td></tr>)}</tbody></table>}</div>}
     {commentIssue && <CommentComposer product="jira" connection={connection} targetId={commentIssue} onClose={() => setCommentIssue(null)} />}
   </>;
+}
+
+type ReportTemplate = {
+  id: string; name: string; name_fa: string; period: string; jql: string; prompt: string;
+};
+
+function KPIWorkspace({ connection }: { connection: Connection }) {
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [templateId, setTemplateId] = useState("weekly_soc_performance");
+  const [projectKey, setProjectKey] = useState("");
+  const [customJql, setCustomJql] = useState("project = SOC AND created >= startOfWeek() ORDER BY priority DESC");
+  const [slaHours, setSlaHours] = useState(24);
+  const [ackField, setAckField] = useState("");
+  const [detectionField, setDetectionField] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [report, setReport] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    api.get("/api/atlassian/report-templates").then((items) => {
+      setTemplates(items);
+      if (items.length && !items.some((item: ReportTemplate) => item.id === templateId)) setTemplateId(items[0].id);
+    }).catch((error) => toast(error.message, "error"));
+  }, []);
+
+  function metricPayload() {
+    return { sla_target_hours: slaHours, acknowledgement_field: ackField.trim(), detection_field: detectionField.trim() };
+  }
+
+  async function runReport() {
+    if (!projectKey.trim()) return toast("Project key is required", "error");
+    setBusy(true);
+    try {
+      const value = await api.post(`/api/atlassian/connections/${connection.id}/jira/reports`, {
+        template_id: templateId, project_key: projectKey.trim(), max_results: 500, ...metricPayload(),
+      });
+      setReport(value); setResult(value.kpis);
+      toast("SOC report and KPI set generated", "ok");
+    } catch (error: any) { toast(error.message, "error"); }
+    finally { setBusy(false); }
+  }
+
+  async function calculateCustom() {
+    if (!customJql.trim()) return toast("JQL is required", "error");
+    setBusy(true);
+    try {
+      const value = await api.post(`/api/atlassian/connections/${connection.id}/jira/kpis`, {
+        jql: customJql, max_results: 500, ...metricPayload(),
+      });
+      setResult(value); setReport(null);
+      toast("KPI set calculated", "ok");
+    } catch (error: any) { toast(error.message, "error"); }
+    finally { setBusy(false); }
+  }
+
+  function downloadReport() {
+    if (!report?.report_markdown) return;
+    const blob = new Blob([report.report_markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
+    anchor.href = url; anchor.download = `soc-${templateId}-${projectKey.toUpperCase()}.md`; anchor.click(); URL.revokeObjectURL(url);
+  }
+
+  if (!connection.products.includes("jira")) return <div className="card empty">KPI calculation requires Jira on this connection.</div>;
+  const selectedTemplate = templates.find((item) => item.id === templateId);
+  return <div className="kpi-workspace">
+    <div className="card mb">
+      <div className="card-head"><div><h3>Default SOC report prompts</h3><p className="faint">Daily, weekly, monthly and shift-handover reports use controlled Jira queries and reusable prompts.</p></div><span className="badge blue">Jira → report / Confluence-ready</span></div>
+      <div className="report-template-grid">
+        {templates.map((item) => <button key={item.id} className={`report-template ${templateId === item.id ? "selected" : ""}`} onClick={() => setTemplateId(item.id)}>
+          <span className="badge">{item.period}</span><b>{item.name}</b><strong dir="rtl">{item.name_fa}</strong><small dir="rtl">{item.prompt}</small>
+        </button>)}
+      </div>
+      {selectedTemplate && <div className="template-query"><label>Template JQL</label><code>{selectedTemplate.jql.replace("{project_key}", projectKey.toUpperCase() || "PROJECT")}</code></div>}
+      <div className="field-row mt"><div><label>Jira project key</label><input className="mono" value={projectKey} onChange={(event) => setProjectKey(event.target.value)} placeholder="SOC" /></div><div><label>SLA resolution target (hours)</label><input type="number" min={1} max={8760} value={slaHours} onChange={(event) => setSlaHours(Number(event.target.value))} /></div></div>
+      <AdvancedKPIFields acknowledgement={ackField} detection={detectionField} onAcknowledgement={setAckField} onDetection={setDetectionField} />
+      <div className="row mt"><button className="btn-primary btn-sm" onClick={runReport} disabled={busy}>{busy ? <span className="spin" /> : "Generate selected report"}</button><span className="faint">The result and trace ID are recorded in integration history and Audit Log.</span></div>
+    </div>
+
+    <details className="card mb"><summary><b>Calculate KPI from custom JQL</b></summary><div className="details-body"><textarea value={customJql} onChange={(event) => setCustomJql(event.target.value)} style={{ minHeight: 70 }} /><button className="btn-primary btn-sm mt" onClick={calculateCustom} disabled={busy}>Calculate KPI</button></div></details>
+
+    {result && <KPIResults value={result} />}
+    {report && <div className="card"><div className="card-head"><div><h3>{report.template.name}</h3><span className="faint mono">Trace {report.correlation_id}</span></div><button className="btn-sm" onClick={downloadReport}>Download Markdown</button></div><Markdown text={report.report_markdown} /></div>}
+  </div>;
+}
+
+function AdvancedKPIFields({ acknowledgement, detection, onAcknowledgement, onDetection }: { acknowledgement: string; detection: string; onAcknowledgement: (value: string) => void; onDetection: (value: string) => void }) {
+  return <details className="kpi-fields"><summary>Advanced KPI field mapping (MTTA / MTTD)</summary><div className="field-row details-body"><div><label>Acknowledgement timestamp field ID</label><input className="mono" value={acknowledgement} onChange={(event) => onAcknowledgement(event.target.value)} placeholder="customfield_10042" /></div><div><label>Detection / event timestamp field ID</label><input className="mono" value={detection} onChange={(event) => onDetection(event.target.value)} placeholder="customfield_10043" /></div></div></details>;
+}
+
+function KPIResults({ value }: { value: any }) {
+  const metrics = Object.entries(value.metrics || {}) as [string, any][];
+  return <div className="card mb"><div className="card-head"><div><h3>SOC KPI snapshot</h3><span className="faint">Calculated from {value.data_quality?.issue_count || 0} returned Jira issues</span></div><span className="badge">SLA {value.sla_target_hours}h</span></div>
+    {value.jira_total > value.data_quality?.issue_count && <div className="notice danger">Jira matched {value.jira_total} issues, but this run processed the first {value.data_quality.issue_count}. Narrow the project/time JQL for an auditable complete period.</div>}
+    <div className="kpi-grid">{metrics.map(([key, metric]) => <div className="kpi-card" key={key}><small>{metric.label}</small><b>{metric.value == null ? "N/A" : metric.value}</b><span>{metric.value == null ? "data required" : metric.unit}</span></div>)}</div>
+    <div className="kpi-breakdowns"><Breakdown title="By status" values={value.breakdowns?.status} /><Breakdown title="By priority" values={value.breakdowns?.priority} /></div>
+    {value.data_quality?.missing?.length > 0 && <div className="notice danger"><b>Data quality</b>{value.data_quality.missing.map((item: any) => <div key={item.metric}>{item.metric.toUpperCase()}: {item.reason}</div>)}</div>}
+  </div>;
+}
+
+function Breakdown({ title, values = {} }: { title: string; values?: Record<string, number> }) {
+  return <div><b>{title}</b>{Object.entries(values).length === 0 ? <span className="faint">No data</span> : Object.entries(values).map(([name, count]) => <div className="breakdown-row" key={name}><span>{name}</span><strong>{count}</strong></div>)}</div>;
 }
 
 function ConfluenceWorkspace({ connection }: { connection: Connection }) {
