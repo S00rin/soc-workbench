@@ -36,6 +36,10 @@ def module_for_path(path: str) -> str:
 
 def specific_features(path: str) -> list[str]:
     features: list[str] = []
+    if path.startswith("/api/dashboard/executive"):
+        features.append("dashboard.executive")
+    if path.startswith("/api/dashboard/technical"):
+        features.append("dashboard.technical")
     if "/jira" in path:
         features.append("integration.jira")
     if "/confluence" in path:

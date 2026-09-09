@@ -28,6 +28,8 @@ MODULE_CATALOG = [
 
 FEATURE_CATALOG = [
     {"key": "module.dashboard", "label": "Dashboard", "module": "dashboard"},
+    {"key": "dashboard.executive", "label": "Executive Dashboard", "module": "dashboard"},
+    {"key": "dashboard.technical", "label": "Technical Dashboard", "module": "dashboard"},
     {"key": "module.data", "label": "Data & IoCs", "module": "data"},
     {"key": "module.integrations", "label": "Analyzer Hub", "module": "integrations"},
     {"key": "integration.jira", "label": "Jira", "module": "integrations"},
