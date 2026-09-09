@@ -69,6 +69,14 @@ per-feature routers.
 - `notifier` — emit in-app notifications.
 - `backup` — database backup/restore.
 - `settings_service` — runtime settings persisted in the DB.
+- `dashboard_metrics` — on-demand executive and technical aggregations behind
+  `/api/dashboard/executive` and `/api/dashboard/technical`: an explainable
+  weighted posture score (unmeasurable components are excluded, not zeroed),
+  period-over-period KPI deltas, daily trend series, ATT&CK tactic coverage
+  from the sensor library, rule-based attention items, and pipeline/job/
+  integration/API/storage analytics. `render_executive_brief` turns the
+  executive payload into Markdown for download or a draft `Report`. Metric
+  definitions are documented in [PROJECT_REVIEW.md](PROJECT_REVIEW.md#3-executive-and-technical-dashboards).
 - `price_analyzer` — contract section splitting (LLM or offline heuristic),
   cost calculation, 3-level WBS/Gantt scheduling, RACI suggestion, and
   PDF/Excel export. See [PRICE_ANALYZER.md](PRICE_ANALYZER.md).
