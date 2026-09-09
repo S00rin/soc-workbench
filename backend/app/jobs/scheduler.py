@@ -66,6 +66,17 @@ def start_scheduler() -> BackgroundScheduler:
     return _scheduler
 
 
+def describe_jobs() -> list[dict]:
+    """Scheduled jobs and their next fire time; empty when the scheduler is idle."""
+    if not _scheduler or not _scheduler.running:
+        return []
+    return [
+        {"id": job.id, "name": job.name, "trigger": str(job.trigger),
+         "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None}
+        for job in _scheduler.get_jobs()
+    ]
+
+
 def shutdown_scheduler() -> None:
     global _scheduler
     if _scheduler and _scheduler.running:

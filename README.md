@@ -12,6 +12,12 @@ an SQLite backing store.
 ## Features
 
 - **Light and dark themes** — switch from the top bar; the browser remembers the choice.
+- **Executive and technical dashboards** — an explainable security-posture score with
+  period-over-period KPIs, portfolio health, risk register, ATT&CK coverage and a
+  downloadable Markdown brief for management; and an engineering view covering the
+  IoC/intel pipeline, jobs and scheduler, integrations, telemetry coverage, API
+  latency/error rates and storage. Both are feature-gated (`dashboard.executive`,
+  `dashboard.technical`) and refresh automatically.
 - **Right-side navigation** — begins with About Sorin and adapts to small screens.
 - **Analyzer Hub** — a guided Connect → Analyze → Review workspace for connected services.
 - **Audit Log** — tenant-scoped administrator history with user/action/status filters, full trace IDs, and CSV export.
@@ -72,8 +78,10 @@ an SQLite backing store.
 | OCR       | Tesseract (`fas`+`eng`) via pytesseract + pypdfium2 (optional)   |
 | Auth      | JWT with database users, module RBAC and encrypted secrets |
 
-See [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) for product usage and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper technical walkthrough.
+See [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) for product usage,
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deeper technical walkthrough, and
+[docs/PROJECT_REVIEW.md](docs/PROJECT_REVIEW.md) for the current code review,
+prioritised improvement plan, dashboard metric definitions and advanced roadmap.
 
 ## Quick start
 

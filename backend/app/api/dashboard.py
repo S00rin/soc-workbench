@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -14,9 +15,54 @@ from ..models.atlassian import AtlassianConnection
 from ..models.governance import ExternalConnection, FeaturePolicy, IntegrationChatSession, UserAccount, UserActivity
 from ..schemas import DashboardOut
 from ..security import AuthContext, get_auth_context
+from ..services import dashboard_metrics
 from ..services.access_control import policy_state
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+ExecutiveDays = Query(30, ge=1, le=365, description="Reporting window in days")
+TechnicalDays = Query(7, ge=1, le=90, description="Analysis window in days")
+
+
+@router.get("/executive")
+def executive(days: int = ExecutiveDays, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    """Management view: posture score, KPI deltas, portfolio health, attention items."""
+    return dashboard_metrics.executive_summary(db, context, days=days)
+
+
+@router.get("/executive/brief", response_class=PlainTextResponse)
+def executive_brief(days: int = ExecutiveDays, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    """The executive view rendered as a Markdown brief for download or sharing."""
+    summary = dashboard_metrics.executive_summary(db, context, days=days)
+    return PlainTextResponse(dashboard_metrics.render_executive_brief(summary), media_type="text/markdown; charset=utf-8")
+
+
+@router.post("/executive/report", status_code=201)
+def executive_report(days: int = ExecutiveDays, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    """Persist the current executive brief as a draft in Reports."""
+    summary = dashboard_metrics.executive_summary(db, context, days=days)
+    now = datetime.now(timezone.utc)
+    report = Report(
+        title=f"Executive brief — {now:%Y-%m-%d} (last {days} days)",
+        report_type="executive",
+        language="en",
+        date_from=summary["period"]["since"][:10],
+        date_to=summary["period"]["until"][:10],
+        data_sources=["dashboard"],
+        content=dashboard_metrics.render_executive_brief(summary),
+        versions=[],
+        status="draft",
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return {"id": report.id, "title": report.title, "status": report.status}
+
+
+@router.get("/technical")
+def technical(days: int = TechnicalDays, db: Session = Depends(get_db), context: AuthContext = Depends(get_auth_context)):
+    """Engineering view: IoC, intel pipeline, jobs, integrations, telemetry, API and storage analytics."""
+    return dashboard_metrics.technical_summary(db, context, days=days)
 
 
 @router.get("", response_model=DashboardOut)
