@@ -216,6 +216,11 @@ label { display: block; font-size: 12.5px; color: var(--text-dim); margin: 12px 
 .badge.red { color: var(--red); border-color: #5a2a2a; background: #271414; }
 .badge.blue { color: var(--accent); border-color: #1e5556; background: #0d2b2c; }
 .badge.purple { color: var(--purple); border-color: #3a2a5a; background: #1c162f; }
+:root[data-theme="light"] .badge.green { background: #e3f6ec; border-color: #9fd9b9; }
+:root[data-theme="light"] .badge.yellow { background: #fbf1d9; border-color: #e3c77a; }
+:root[data-theme="light"] .badge.red { background: #fde4e2; border-color: #f0a19c; }
+:root[data-theme="light"] .badge.blue { background: #dcf3f2; border-color: #8fd3d1; }
+:root[data-theme="light"] .badge.purple { background: #e6eafb; border-color: #aeb9ec; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
   border-radius: 16px; font-size: 12px; background: var(--bg-elev-2);
@@ -311,6 +316,7 @@ table.data tr:hover td { background: var(--bg-elev); }
 .page-intro h1 { font-size: 25px; }
 .page-intro p, .atlassian-head p { color: var(--text-dim); margin: 4px 0 0; }
 .hub-tabs { background: rgba(13,27,34,.72); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; position: sticky; top: 62px; z-index: 4; backdrop-filter: blur(10px); }
+:root[data-theme="light"] .hub-tabs { background: rgba(255,255,255,.85); }
 .hub-tabs .tab { border-radius: 8px; border: 0; }
 .hub-tabs .tab.active { background: rgba(34,184,181,.13); color: var(--accent); }
 .dashboard-hero { min-height: 142px; display: flex; align-items: center; justify-content: space-between; padding: 24px 28px; border: 1px solid rgba(34,184,181,.25); border-radius: 16px; background: linear-gradient(110deg, rgba(34,184,181,.13), rgba(13,27,34,.85) 45%, rgba(78,108,211,.1)); overflow: hidden; }
@@ -395,6 +401,7 @@ table.data tr:hover td { background: var(--bg-elev); }
 .gap-callouts .expiry-callout { margin-top: 10px; }
 .gap-callouts .expiry-callout > div { display: flex; flex-direction: column; }
 .attention-row .meta { margin-top: 3px; }
+.dash-section .list-row > div.row { flex-direction: row; align-items: center; }
 table.data.compact th, table.data.compact td { padding: 6px 8px; font-size: 12.5px; }
 .progress-bar.small { width: 90px; }
 .text-red { color: var(--red); }
