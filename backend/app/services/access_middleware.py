@@ -21,7 +21,7 @@ PATH_MODULES = [
     (("/api/reports",), "reports"),
     (("/api/sensors",), "sensors"),
     (("/api/price-analyzer",), "price_analyzer"),
-    (("/api/jobs", "/api/notifications", "/api/backup"), "operations"),
+    (("/api/jobs", "/api/notifications", "/api/backup", "/api/anomalies"), "operations"),
     (("/api/prompts", "/api/llm"), "prompts"),
     (("/api/settings",), "settings"),
 ]
@@ -60,7 +60,7 @@ def specific_features(path: str) -> list[str]:
 class ProductAccessMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if not path.startswith("/api/") or path in {"/api/health", "/api/auth/login"}:
+        if not path.startswith("/api/") or path in {"/api/health", "/api/health/ready", "/api/metrics", "/api/auth/login"}:
             return await call_next(request)
 
         trace_id = request.headers.get("X-Correlation-ID") or uuid.uuid4().hex

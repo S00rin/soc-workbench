@@ -5,10 +5,11 @@ import { Loading, Modal, useToast } from "../lib";
 type Setting = { key: string; value: string; is_secret: boolean; category: string; has_value: boolean };
 type Pattern = { id: number; label: string; pattern: string; is_regex: boolean; enabled: boolean; token_prefix: string };
 
-const CATEGORY_ORDER = ["llm", "processing", "general", "atlassian", "jira", "splunk", "smtp", "telegram"];
+const CATEGORY_ORDER = ["llm", "processing", "general", "atlassian", "jira", "splunk", "smtp", "telegram", "anomaly", "ioc_lifecycle", "brief"];
 const CATEGORY_LABELS: Record<string, string> = {
   llm: "LLM", processing: "Processing", general: "General", atlassian: "Atlassian policy", jira: "Jira (legacy)",
   splunk: "Splunk", smtp: "Email (SMTP)", telegram: "Telegram",
+  anomaly: "Silent-sensor / feed anomalies", ioc_lifecycle: "IoC lifecycle", brief: "Executive brief schedule",
 };
 
 function label(key: string) {
@@ -18,6 +19,15 @@ function label(key: string) {
 // Keys that should render as a dropdown instead of a free-text field.
 const SELECT_OPTIONS: Record<string, string[]> = {
   llm_provider: ["anthropic", "sorin_compatible", "sorin_cli", "codex_cli"],
+  anomaly_enabled: ["true", "false"],
+  anomaly_notify_channel: ["inapp", "email", "webhook", "telegram"],
+  ioc_retrohunt_enabled: ["true", "false"],
+  brief_enabled: ["true", "false"],
+  brief_schedule: ["daily", "weekly"],
+  brief_weekday: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+  brief_language: ["en", "fa"],
+  brief_publish_confluence: ["true", "false"],
+  brief_notify_channel: ["inapp", "email", "webhook", "telegram"],
 };
 
 const KEY_HINTS: Record<string, string> = {
@@ -29,6 +39,16 @@ const KEY_HINTS: Record<string, string> = {
   atlassian_bulk_max_issues: "Hard maximum target count for one Jira or Confluence bulk job.",
   atlassian_auto_post_enabled: "Global safety flag; the connection must also explicitly allow auto-post.",
   atlassian_bulk_auto_post_enabled: "Global safety flag for bulk auto-post; admin approval controls still apply.",
+  anomaly_eps_drop_pct: "Alert when live Splunk EPS falls below this percent of the learned/catalog baseline.",
+  anomaly_feed_drop_pct: "Alert when an intel/IoC feed's latest yield falls below this percent of its rolling baseline.",
+  anomaly_splunk_window_minutes: "Lookback window for each EPS sample. Requires Splunk settings.",
+  ioc_decay_half_life_days: "Score halves this many days after the last sighting (or first seen).",
+  ioc_expire_score: "Indicators below this score are marked expired.",
+  ioc_watchlist_min_score: "Auto-promote indicators at or above this score onto the watchlist.",
+  ioc_retrohunt_enabled: "When true, the 04:30 UTC lifecycle job also runs a bounded Splunk retro-hunt.",
+  brief_enabled: "Generate the executive brief on the schedule below (PDF + Reports; Confluence optional).",
+  brief_confluence_space: "Space key (Data Center) or numeric space id (Cloud) used when publishing the brief.",
+  brief_hour_utc: "Hour (0–23 UTC) the scheduled brief job fires.",
 };
 
 export default function Settings() {

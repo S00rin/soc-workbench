@@ -7,11 +7,12 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from ..database import SessionLocal
 from ..logging_config import get_logger
-from ..services import intelligence_automation
+from ..config import get_settings
+from ..services import anomaly_detection, executive_brief, intelligence_automation, ioc_lifecycle
 from ..services import jobs as job_service
 from ..services.backup import create_backup
 from ..services.integration_history import enforce_retention
-from ..services.settings_service import get_value
+from ..services.settings_service import get_int, get_value
 from ..models.atlassian import IntegrationHistory
 
 logger = get_logger(__name__)
@@ -30,6 +31,53 @@ def _collect_intelligence() -> None:
         finally:
             db.close()
     job_service.submit("intelligence", "Scheduled intel, KB, and IoC refresh", worker)
+
+
+def _tenant_ids(db) -> list[str]:
+    ids = {get_settings().default_tenant_id}
+    from ..models.governance import UserAccount
+    from ..models.sensors import Sensor
+
+    ids.update(value for (value,) in db.query(UserAccount.tenant_id).distinct().all() if value)
+    ids.update(value for (value,) in db.query(Sensor.tenant_id).distinct().all() if value)
+    return sorted(ids)
+
+
+def _detect_anomalies() -> None:
+    def worker():
+        db = SessionLocal()
+        try:
+            results = [anomaly_detection.run_detection(db, tenant_id) for tenant_id in _tenant_ids(db)]
+            opened = sum(item.get("opened", 0) for item in results if isinstance(item, dict))
+            return f"anomaly detection opened {opened} alert(s)"
+        finally:
+            db.close()
+    job_service.submit("anomaly", "Silent-sensor and feed-anomaly detection", worker)
+
+
+def _ioc_lifecycle() -> None:
+    def worker():
+        db = SessionLocal()
+        try:
+            result = ioc_lifecycle.run_lifecycle(db)
+            scores = result.get("scores") or {}
+            return f"IoC lifecycle: {scores}"
+        finally:
+            db.close()
+    job_service.submit("ioc_lifecycle", "IoC decay, expiry and optional retro-hunt", worker)
+
+
+def _executive_brief() -> None:
+    def worker():
+        db = SessionLocal()
+        try:
+            result = executive_brief.scheduled_run(db)
+            if result.get("skipped"):
+                return f"executive brief skipped ({result.get('reason')})"
+            return f"executive brief report #{result.get('report_id')}"
+        finally:
+            db.close()
+    job_service.submit("executive_brief", "Scheduled executive brief (PDF + Confluence)", worker)
 
 
 def _enforce_atlassian_retention() -> None:
@@ -61,9 +109,31 @@ def start_scheduler() -> BackgroundScheduler:
         _enforce_atlassian_retention, CronTrigger(hour=3, minute=0), id="atlassian_history_retention",
         replace_existing=True, coalesce=True, max_instances=1,
     )
+    db = SessionLocal()
+    try:
+        anomaly_minutes = max(5, get_int(db, "anomaly_interval_minutes", 15))
+        brief_hour = min(23, max(0, get_int(db, "brief_hour_utc", 6)))
+    finally:
+        db.close()
+    _scheduler.add_job(
+        _detect_anomalies, IntervalTrigger(minutes=anomaly_minutes), id="anomaly_detection",
+        replace_existing=True, coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        _ioc_lifecycle, CronTrigger(hour=4, minute=30), id="ioc_lifecycle",
+        replace_existing=True, coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        _executive_brief, CronTrigger(hour=brief_hour, minute=0), id="executive_brief",
+        replace_existing=True, coalesce=True, max_instances=1,
+    )
     _scheduler.start()
     logger.info("Scheduler started with %d job(s)", len(_scheduler.get_jobs()))
     return _scheduler
+
+
+def is_running() -> bool:
+    return bool(_scheduler and _scheduler.running)
 
 
 def describe_jobs() -> list[dict]:

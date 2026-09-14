@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { Loading, timeAgo } from "../../lib";
+import { api } from "../../api";
+import { Loading, timeAgo, useToast } from "../../lib";
 import {
   BarList, Empty, HourlyBars, KeyValue, Metric, Section, SeverityBadge, StatusBadge, TacticGrid,
   fmtBytes, fmtDate, fmtMs, fmtNum, fmtPct, toneFor, useLiveData,
@@ -9,10 +10,26 @@ const PERIODS = [1, 7, 30];
 
 export default function Technical({ days, onDays, refreshMs }: { days: number; onDays: (value: number) => void; refreshMs: number }) {
   const nav = useNavigate();
+  const toast = useToast();
   const { data, err, loading, refresh, updatedAt } = useLiveData(`/api/dashboard/technical?days=${days}`, refreshMs);
   if (err) return <div className="card badge red" style={{ display: "block" }}>{err}</div>;
   if (!data) return <Loading label="Computing technical metrics…" />;
-  const { iocs, intel, jobs, integrations, telemetry, api: apiStats, storage } = data;
+  const { iocs, intel, jobs, integrations, telemetry, api: apiStats, storage, anomalies } = data;
+
+  async function ackAnomaly(id: number, action: "ack" | "resolve") {
+    try {
+      await api.post(`/api/anomalies/${id}/${action}`);
+      toast(action === "ack" ? "Acknowledged" : "Resolved", "ok");
+      refresh();
+    } catch (error: any) { toast(error.message, "error"); }
+  }
+  async function runDetection() {
+    try {
+      const result = await api.post("/api/anomalies/run");
+      toast(result.skipped ? "Detection is disabled" : `Opened ${result.opened} alert(s)`, "ok");
+      refresh();
+    } catch (error: any) { toast(error.message, "error"); }
+  }
 
   return <>
     <div className="dash-toolbar mb">
@@ -32,7 +49,15 @@ export default function Technical({ days, onDays, refreshMs }: { days: number; o
       <Metric label="IoCs (24h)" value={fmtNum(iocs.new_24h)} hint={`${fmtNum(iocs.total)} total · ${iocs.multi_source} multi-source`} onClick={() => nav("/data?tab=iocs")} />
       <Metric label="Intel (24h)" value={fmtNum(intel.items_24h)} hint={`${intel.unread} unread`} onClick={() => nav("/intelligence?tab=intel")} />
       <Metric label="Telemetry EPS" value={fmtNum(telemetry.eps_total)} hint={`${telemetry.log_sources} log sources · ${telemetry.sensors_total} sensors`} onClick={() => nav("/sensors")} />
+      <Metric label="Open anomalies" value={fmtNum(anomalies?.open || 0)} hint={Object.entries(anomalies?.by_kind || {}).map(([k, v]) => `${k} ${v}`).join(" · ") || "silent-sensor / feed yield"} tone={(anomalies?.open || 0) > 0 ? "red" : "green"} />
     </div>
+
+    <Section title="Silent-sensor & feed anomalies" subtitle={`${anomalies?.samples_24h || 0} sample(s) in 24h · EPS and yield vs rolling baselines`} className="mb" action={<button className="btn-sm" onClick={runDetection}>Run detection</button>}>
+      {!anomalies?.items?.length ? <Empty>No open silent-sensor or feed-anomaly alerts.</Empty> : <div className="list">{anomalies.items.map((item: any) => <div className="list-row attention-row" key={item.id}>
+        <div><div className="row"><SeverityBadge level={item.severity} /><span className="badge">{item.kind.replace("_", " ")}</span><b>{item.title}</b></div><span className="meta">{item.detail}</span></div>
+        <div className="row"><button className="btn-sm btn-ghost" onClick={() => ackAnomaly(item.id, "ack")}>Ack</button><button className="btn-sm" onClick={() => ackAnomaly(item.id, "resolve")}>Resolve</button></div>
+      </div>)}</div>}
+    </Section>
 
     <div className="grid cols-2 mb">
       <Section title="IoC analytics" subtitle="Indicator inventory and hygiene" action={<button className="btn-sm btn-ghost" onClick={() => nav("/data?tab=iocs")}>Open IoCs</button>}>
@@ -43,6 +68,8 @@ export default function Technical({ days, onDays, refreshMs }: { days: number; o
         <KeyValue rows={[
           ["False positives", `${iocs.false_positives} (${fmtPct(iocs.fp_ratio)})`],
           ["Expired / expiring 30d", `${iocs.expired} / ${iocs.expiring_30d}`],
+          ["Watchlist / avg score", `${fmtNum(iocs.watchlist || 0)} / ${iocs.avg_score ?? "—"}`],
+          ["Lifecycle", Object.entries(iocs.by_status || {}).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"],
           ["New in period", fmtNum(iocs.new_period)],
           ["Confidence", Object.entries(iocs.by_confidence).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"],
         ]} />

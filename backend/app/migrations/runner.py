@@ -13,13 +13,13 @@ from ..database import engine
 from . import (
     v0001_atlassian_domain, v0002_product_governance, v0003_price_analyzer,
     v0004_help_guides, v0005_contract_knowledge_link, v0006_equipment_sensors,
-    v0007_sorin_naming,
+    v0007_sorin_naming, v0008_ops_signals,
 )
 
 MIGRATIONS = [
     v0001_atlassian_domain, v0002_product_governance, v0003_price_analyzer,
     v0004_help_guides, v0005_contract_knowledge_link, v0006_equipment_sensors,
-    v0007_sorin_naming,
+    v0007_sorin_naming, v0008_ops_signals,
 ]
 
 

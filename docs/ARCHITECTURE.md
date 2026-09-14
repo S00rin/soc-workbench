@@ -73,10 +73,17 @@ per-feature routers.
   `/api/dashboard/executive` and `/api/dashboard/technical`: an explainable
   weighted posture score (unmeasurable components are excluded, not zeroed),
   period-over-period KPI deltas, daily trend series, ATT&CK tactic coverage
-  from the sensor library, rule-based attention items, and pipeline/job/
-  integration/API/storage analytics. `render_executive_brief` turns the
-  executive payload into Markdown for download or a draft `Report`. Metric
-  definitions are documented in [PROJECT_REVIEW.md](PROJECT_REVIEW.md#3-executive-and-technical-dashboards).
+  from the sensor library, rule-based attention items (including open
+  silent-sensor / feed-anomaly alerts), and pipeline/job/integration/API/storage
+  analytics. `render_executive_brief` turns the executive payload into English or
+  Farsi Markdown; `pdf_export` renders a real PDF. Metric definitions are
+  documented in [PROJECT_REVIEW.md](PROJECT_REVIEW.md#3-executive-and-technical-dashboards).
+- `anomaly_detection` — Splunk EPS sampling vs sensor baselines, intel/IoC feed
+  yield baselines, `AnomalyEvent` lifecycle, and notifications.
+- `ioc_lifecycle` — decay scoring, expiry, Splunk retro-hunt sightings, CSV/STIX
+  watchlist export.
+- `executive_brief` — scheduled/on-demand brief → Report + PDF + optional Confluence.
+- `health` — `/api/health/ready` and Prometheus `/metrics`.
 - `price_analyzer` — contract section splitting (LLM or offline heuristic),
   cost calculation, 3-level WBS/Gantt scheduling, RACI suggestion, and
   PDF/Excel export. See [PRICE_ANALYZER.md](PRICE_ANALYZER.md).

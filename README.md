@@ -14,10 +14,16 @@ an SQLite backing store.
 - **Light and dark themes** — switch from the top bar; the browser remembers the choice.
 - **Executive and technical dashboards** — an explainable security-posture score with
   period-over-period KPIs, portfolio health, risk register, ATT&CK coverage and a
-  downloadable Markdown brief for management; and an engineering view covering the
-  IoC/intel pipeline, jobs and scheduler, integrations, telemetry coverage, API
-  latency/error rates and storage. Both are feature-gated (`dashboard.executive`,
-  `dashboard.technical`) and refresh automatically.
+  downloadable Markdown/PDF brief (optional Confluence publish) for management; and an
+  engineering view covering the IoC/intel pipeline, silent-sensor / feed-anomaly alerts,
+  jobs and scheduler, integrations, telemetry coverage, API latency/error rates and
+  storage. Both are feature-gated (`dashboard.executive`, `dashboard.technical`) and
+  refresh automatically.
+- **Silent-sensor / feed-anomaly alerts** — Splunk EPS vs sensor baselines and intel
+  feed yield vs rolling averages; notifications plus dashboard attention items.
+- **IoC lifecycle** — decay scoring, expiry, Splunk retro-hunt sightings, and CSV/STIX
+  watchlist export.
+- **Readiness and Prometheus metrics** — `GET /api/health/ready` and `GET /metrics`.
 - **Right-side navigation** — begins with About Sorin and adapts to small screens.
 - **Analyzer Hub** — a guided Connect → Analyze → Review workspace for connected services.
 - **Audit Log** — tenant-scoped administrator history with user/action/status filters, full trace IDs, and CSV export.
@@ -28,7 +34,7 @@ an SQLite backing store.
 - **IoCs** — track indicators of compromise across investigations.
 - **Projects** — group documents, indicators, and findings per investigation.
 - **Internet intelligence** — pull and normalize RSS/Atom threat feeds.
-- **Reports** — assemble and export Markdown/HTML reports.
+- **Reports** — assemble and export Markdown, HTML, DOCX and PDF reports.
 - **Price Analyzer** — turn a Persian or English contract/SOW into an
   editable person-hour estimate and cost breakdown (user-defined hourly
   rates, overhead/contingency/tax/discount), a 3-level WBS with a Gantt

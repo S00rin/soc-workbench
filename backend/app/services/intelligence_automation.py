@@ -13,6 +13,7 @@ from ..models.automation import IntelSource, IoCObservation, IoCSource
 from ..models.content import IntelItem, KnowledgeItem
 from ..models.entities import IoC
 from . import entities, intel_collector, llm
+from .anomaly_detection import record_feed_sample
 from .settings_service import get_all_resolved
 
 INCLUDE_TOPICS = {
@@ -239,6 +240,10 @@ def collect_intel_source(db: Session, source: IntelSource) -> dict:
         source.last_success_at = utcnow()
         source.last_error = ""
         source.failure_count = 0
+        record_feed_sample(
+            db, kind="intel_feed", source_id=source.id, name=source.name,
+            yield_count=new_count, window_minutes=source.interval_minutes or 60,
+        )
         db.commit()
         return {"new": new_count, "knowledge": kb_count, "iocs": ioc_count, "rejected": rejected}
     except Exception as exc:
@@ -308,6 +313,10 @@ def collect_ioc_source(db: Session, source: IoCSource) -> dict:
         source.last_success_at = utcnow()
         source.last_error = ""
         source.failure_count = 0
+        record_feed_sample(
+            db, kind="ioc_feed", source_id=source.id, name=source.name,
+            yield_count=accepted, window_minutes=source.interval_minutes or 60,
+        )
         db.commit()
         return {"received": len(records), "accepted": accepted}
     except Exception as exc:

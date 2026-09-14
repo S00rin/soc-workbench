@@ -200,6 +200,7 @@ class IoCIn(BaseModel):
     related_customer: str = ""
     notes: str = ""
     false_positive: bool = False
+    watchlist: bool = False
 
 
 class IoCOut(ORMModel):
@@ -216,6 +217,14 @@ class IoCOut(ORMModel):
     related_customer: str
     notes: str
     false_positive: bool
+    status: str = "active"
+    score: float = 100.0
+    last_sighted_at: str = ""
+    sighting_count: int = 0
+    watchlist: bool = False
+    first_seen: str = ""
+    last_seen: str = ""
+    expires_at: str = ""
     created_at: datetime
 
 

@@ -4,24 +4,24 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import auth, dashboard, documents, iocs, jobs, knowledge, projects
 from .api import settings as settings_api
 from .config import get_settings
-from .database import SessionLocal, init_db
+from .database import SessionLocal, get_db, init_db
 from .jobs.scheduler import shutdown_scheduler, start_scheduler
 from .logging_config import get_logger, setup_logging
 from .services.access_middleware import ProductAccessMiddleware
 from .routers import (
-    atlassian, attack_lab, automation, governance, help, integration_chat, intel, jira, llm, notifications,
+    anomalies, atlassian, attack_lab, automation, governance, help, integration_chat, intel, jira, llm, notifications,
     price_analyzer, prompts, reports, search, sensors, splunk, wikijs,
 )
 from .services import (
-    access_control, atlassian_connections, help_guides, intelligence_automation,
+    access_control, atlassian_connections, health, help_guides, intelligence_automation,
     sensors as sensors_service, settings_service,
 )
 
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     logger.info("%s shutting down", app_settings.app_name)
 
 
-app = FastAPI(title=app_settings.app_name, version="0.4.0", lifespan=lifespan)
+app = FastAPI(title=app_settings.app_name, version="0.5.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_settings.cors_origin_list,
@@ -64,14 +64,28 @@ app.add_middleware(ProductAccessMiddleware)
 for module in (
     auth, settings_api, dashboard, documents, knowledge, iocs, projects, jobs,
     jira, atlassian, governance, wikijs, integration_chat, splunk, intel, reports, notifications, prompts,
-    llm, search, automation, price_analyzer, help, attack_lab, sensors,
+    llm, search, automation, price_analyzer, help, attack_lab, sensors, anomalies,
 ):
     app.include_router(module.router)
 
 
 @app.get("/api/health")
-def health() -> dict:
-    return {"status": "ok", "app": app_settings.app_name, "version": "0.4.0"}
+def healthcheck() -> dict:
+    return {"status": "ok", "app": app_settings.app_name, "version": health.APP_VERSION}
+
+
+@app.get("/api/health/ready")
+def ready(db=Depends(get_db)):
+    payload = health.readiness(db)
+    if payload["status"] != "ready":
+        return JSONResponse(payload, status_code=503)
+    return payload
+
+
+@app.get("/metrics")
+@app.get("/api/metrics")
+def metrics(db=Depends(get_db)):
+    return PlainTextResponse(health.prometheus_text(db), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

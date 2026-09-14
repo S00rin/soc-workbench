@@ -141,7 +141,7 @@ def export_report(report_id: int, fmt: str = "md", db: Session = Depends(get_db)
         elif fmt == "docx":
             path = report_builder.export_docx(row.content, settings.reports_dir, name)
         elif fmt == "pdf":
-            path = report_builder.export_pdf(row.content, settings.reports_dir, name, row.title)
+            path = report_builder.export_pdf(row.content, settings.reports_dir, name, row.title, row.language or "en")
         else:
             raise HTTPException(400, "Unsupported format")
     except Exception as e:  # noqa: BLE001

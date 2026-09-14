@@ -6,7 +6,7 @@ import { ToastProvider } from "../lib";
 import Dashboard from "./Dashboard";
 
 vi.mock("../api", () => ({
-  api: { get: vi.fn(), post: vi.fn(), download: vi.fn() },
+  api: { get: vi.fn(), post: vi.fn(), download: vi.fn(), patch: vi.fn() },
 }));
 import { api } from "../api";
 
@@ -40,13 +40,14 @@ const executivePayload = {
 const technicalPayload = {
   generated_at: "2026-09-09T12:00:00+00:00",
   period: { days: 7, since: "2026-09-02T12:00:00+00:00", until: "2026-09-09T12:00:00+00:00" },
-  iocs: { total: 6, by_type: { ipv4: 4, domain: 2 }, by_severity: { high: 2 }, by_confidence: { medium: 6 }, false_positives: 1, fp_ratio: 16.7, new_24h: 2, new_period: 5, expiring_30d: 1, expired: 1, multi_source: 1, top_sources: [{ name: "ThreatFox", count: 4 }], recent_high: [{ id: 1, value: "10.0.0.1", ioc_type: "ipv4", severity: "high", source: "ThreatFox", created_at: "2026-09-09T11:00:00+00:00" }] },
+  iocs: { total: 6, by_type: { ipv4: 4, domain: 2 }, by_severity: { high: 2 }, by_confidence: { medium: 6 }, false_positives: 1, fp_ratio: 16.7, new_24h: 2, new_period: 5, expiring_30d: 1, expired: 1, by_status: { active: 5, expired: 1 }, watchlist: 2, avg_score: 72, multi_source: 1, top_sources: [{ name: "ThreatFox", count: 4 }], recent_high: [{ id: 1, value: "10.0.0.1", ioc_type: "ipv4", severity: "high", source: "ThreatFox", created_at: "2026-09-09T11:00:00+00:00" }] },
   intel: { items_24h: 1, items_period: 1, unread: 3, saved: 0, avg_relevance: 0.8, by_category: { Malware: 1 }, by_source: { "Feed A": 1 }, sources: [{ id: 1, name: "Feed A", kind: "rss", enabled: true, interval_minutes: 60, trust_score: 0.7, failure_count: 0, last_success_at: "2026-09-09T11:30:00+00:00", last_error: "", status: "healthy" }], source_status: { healthy: 1, stale: 0, failing: 0, never_run: 0, disabled: 0 } },
   jobs: { total: 4, completed: 3, failed: 1, success_rate: 75, avg_duration_s: 90, p95_duration_s: 90, by_kind: { intelligence: { completed: 3, failed: 1 } }, failed_24h: 1, queue: { pending: 0, running: 0 }, scheduler: [{ id: "daily_backup", name: "_daily_backup", trigger: "cron[hour='2']", next_run_time: "2026-09-10T02:00:00+00:00" }], recent_failures: [{ id: 9, name: "job-0", kind: "intelligence", error: "boom", attempts: 1, created_at: "2026-09-08T12:00:00+00:00" }], notifications_by_status: {} },
   integrations: { connections: [{ id: 1, name: "Jira Cloud", provider: "atlassian", products: ["jira"], enabled: true, status: "connected", last_success_at: "2026-09-09T11:00:00+00:00", last_test_at: null, error_code: "", error_summary: "" }], status_counts: { connected: 1 }, history: { total: 2, success: 1, failed: 1, success_rate: 50, avg_duration_ms: 2625, p95_duration_ms: 5000, by_operation: { search: { success: 1, failed: 1 } }, top_errors: [{ code: "timeout", count: 1 }] }, chat: { turns: 0, failed: 0, error_rate: null, avg_duration_ms: null, by_provider: {} } },
   telemetry: { sensors_total: 2, by_category: { firewall: 1, ids: 1 }, by_status: { active: 1, deprecated: 1 }, by_criticality: { medium: 2 }, log_sources: 2, eps_total: 1700, retention_avg_days: 135, without_siem_index: [{ sensor: "Palo Alto NGFW", log_source: "Threat" }], documents_by_kind: { runbook: 1 }, sensors_without_playbook: ["Palo Alto NGFW"], sensors_without_runbook: [], confluence_published: 0, coverage: { total: 14, covered: 3, coverage_pct: 21.4, active_sensors: 1, gaps: [], tactics: [{ tactic: "Initial Access", count: 1, sensors: ["Palo Alto NGFW"] }] }, eps_by_sensor: [{ sensor: "Palo Alto NGFW", eps: 1700 }] },
   api: { requests: 10, writes: 2, errors: 2, error_rate: 20, p50_ms: 60, p95_ms: 110, max_ms: 110, status_classes: { "2xx": 8, "3xx": 0, "4xx": 0, "5xx": 2 }, by_module: [{ module: "data", requests: 10, errors: 2, error_rate: 20, p95_ms: 110 }], slowest: [{ action: "GET /api/iocs", count: 10, p95_ms: 110 }], active_users: 2, hourly: Array.from({ length: 24 }, (_, i) => ({ hour: `2026-09-08T${String(i).padStart(2, "0")}:00:00+00:00`, count: i % 3, errors: i % 7 === 0 ? 1 : 0 })) },
   storage: { database_bytes: 876544, uploads_bytes: 0, reports_bytes: 0, exports_bytes: 0, backups_bytes: 0, backup: { count: 0, last_backup_at: null, last_backup_bytes: 0 }, documents_total: 1, documents_by_source: { file: 1 }, knowledge_by_type: { note: 2 }, token_estimate_total: 1200, analyses_by_kind: {}, analysis_tokens_total: 0, token_mappings: 4, sensitive_patterns_enabled: 3, reports_by_status: { final: 2 } },
+  anomalies: { open: 1, by_kind: { silent_sensor: 1 }, samples_24h: 4, items: [{ id: 7, kind: "silent_sensor", severity: "high", title: "Silent sensor: NGFW / Traffic", detail: "Observed 0 EPS against a 100 EPS baseline.", status: "open" }] },
 };
 
 const overviewPayload = {
@@ -92,6 +93,8 @@ describe("dashboard views", () => {
     expect(screen.getByText("Log source delay")).toBeInTheDocument();
     expect(screen.getByText("module.reports")).toBeInTheDocument();
     expect(screen.getByText("Download brief (.md)")).toBeInTheDocument();
+    expect(screen.getByText("Download PDF")).toBeInTheDocument();
+    expect(screen.getByText("Publish to Confluence")).toBeInTheDocument();
   });
 
   it("renders the technical view with pipeline, integration and API analytics", async () => {
@@ -103,6 +106,8 @@ describe("dashboard views", () => {
     expect(screen.getByText("Jira Cloud")).toBeInTheDocument();
     expect(screen.getByText("daily_backup")).toBeInTheDocument();
     expect(screen.getByText("1 log source(s) without a SIEM index")).toBeInTheDocument();
+    expect(screen.getByText("Open anomalies")).toBeInTheDocument();
+    expect(screen.getByText("Silent sensor: NGFW / Traffic")).toBeInTheDocument();
     expect(screen.getByText("GET /api/iocs")).toBeInTheDocument();
   });
 

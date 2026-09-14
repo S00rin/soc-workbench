@@ -152,3 +152,36 @@ class SplunkClient:
             {"name": e["name"], "search": e["content"].get("search", "")}
             for e in entries
         ]
+
+
+def config_from_settings(values: dict[str, str]) -> SplunkConfig | None:
+    """Build a SplunkConfig from resolved settings, or None if unconfigured."""
+    base_url = (values.get("splunk_base_url") or "").strip()
+    if not base_url:
+        return None
+    allowed = [x.strip() for x in (values.get("splunk_allowed_indexes") or "").split(",") if x.strip()]
+    try:
+        timeout = int(values.get("splunk_timeout") or 60)
+    except ValueError:
+        timeout = 60
+    try:
+        max_results = int(values.get("splunk_max_results") or 1000)
+    except ValueError:
+        max_results = 1000
+    return SplunkConfig(
+        base_url=base_url,
+        token=values.get("splunk_token") or "",
+        username=values.get("splunk_username") or "",
+        password=values.get("splunk_password") or "",
+        verify_ssl=str(values.get("splunk_verify_ssl") or "true").lower() == "true",
+        timeout=timeout,
+        allowed_indexes=allowed or None,
+        max_results=max_results,
+    )
+
+
+def client_from_settings(values: dict[str, str]) -> SplunkClient | None:
+    cfg = config_from_settings(values)
+    if cfg is None:
+        return None
+    return SplunkClient(cfg)
