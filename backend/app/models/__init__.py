@@ -13,6 +13,7 @@ from .governance import (
 )
 from .help import HelpGuide
 from .price_analyzer import Contract, ContractSection, RACIEntry, WBSItem
+from .ops import AnomalyEvent, IoCSighting, TelemetrySample
 from .sensors import Sensor, SensorDocument, SensorLogSource
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "HelpGuide",
     "Contract", "ContractSection", "WBSItem", "RACIEntry",
     "Sensor", "SensorLogSource", "SensorDocument",
+    "TelemetrySample", "AnomalyEvent", "IoCSighting",
 ]

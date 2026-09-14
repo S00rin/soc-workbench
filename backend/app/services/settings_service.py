@@ -81,6 +81,38 @@ DEFAULTS = {
     "intel_auto_kb": ("true", "intel"),         # mirror new items into KB
     "intel_auto_iocs": ("true", "intel"),       # extract IoCs into IoC list
     "intel_summarize": ("false", "intel"),      # LLM EN/FA summaries on refresh
+    # Silent-sensor / feed-anomaly detection
+    "anomaly_enabled": ("true", "anomaly"),
+    "anomaly_interval_minutes": ("15", "anomaly"),
+    "anomaly_eps_drop_pct": ("50", "anomaly"),
+    "anomaly_silent_eps": ("0.05", "anomaly"),
+    "anomaly_min_expected_eps": ("0.5", "anomaly"),
+    "anomaly_feed_drop_pct": ("50", "anomaly"),
+    "anomaly_feed_baseline_runs": ("8", "anomaly"),
+    "anomaly_feed_min_baseline": ("2", "anomaly"),
+    "anomaly_splunk_window_minutes": ("15", "anomaly"),
+    "anomaly_notify_channel": ("inapp", "anomaly"),  # inapp | email | webhook | telegram
+    "anomaly_notify_recipients": ("", "anomaly"),
+    # IoC lifecycle
+    "ioc_decay_half_life_days": ("14", "ioc_lifecycle"),
+    "ioc_expire_score": ("15", "ioc_lifecycle"),
+    "ioc_watchlist_min_score": ("60", "ioc_lifecycle"),
+    "ioc_retrohunt_enabled": ("false", "ioc_lifecycle"),
+    "ioc_retrohunt_earliest": ("-24h", "ioc_lifecycle"),
+    "ioc_retrohunt_max_iocs": ("50", "ioc_lifecycle"),
+    # Scheduled executive brief
+    "brief_enabled": ("false", "brief"),
+    "brief_schedule": ("daily", "brief"),  # daily | weekly
+    "brief_weekday": ("mon", "brief"),
+    "brief_hour_utc": ("6", "brief"),
+    "brief_days": ("30", "brief"),
+    "brief_language": ("en", "brief"),
+    "brief_publish_confluence": ("false", "brief"),
+    "brief_confluence_connection_id": ("", "brief"),
+    "brief_confluence_space": ("", "brief"),
+    "brief_confluence_parent_id": ("", "brief"),
+    "brief_notify_channel": ("inapp", "brief"),
+    "brief_notify_recipients": ("", "brief"),
 }
 
 
@@ -134,6 +166,39 @@ def get_all_safe(db: Session) -> list[dict]:
             }
         )
     return out
+
+
+def as_bool(value: str, default: bool = False) -> bool:
+    if value is None or value == "":
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def as_int(value: str, default: int = 0) -> int:
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def as_float(value: str, default: float = 0.0) -> float:
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def get_bool(db: Session, key: str, default: bool = False) -> bool:
+    fallback = "true" if default else "false"
+    return as_bool(get_value(db, key, fallback), default)
+
+
+def get_int(db: Session, key: str, default: int = 0) -> int:
+    return as_int(get_value(db, key, str(default)), default)
+
+
+def get_float(db: Session, key: str, default: float = 0.0) -> float:
+    return as_float(get_value(db, key, str(default)), default)
 
 
 def set_value(db: Session, key: str, value: str, category: str = "general") -> None:

@@ -1,7 +1,7 @@
 """Domain entities: IoCs, projects, reports, prompts, notifications, analyses."""
 from __future__ import annotations
 
-from sqlalchemy import JSON, Boolean, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -29,6 +29,11 @@ class IoC(Base, TimestampMixin):
     related_customer: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     false_positive: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)  # active|watchlist|decaying|expired|retired
+    score: Mapped[float] = mapped_column(Float, default=100.0)
+    last_sighted_at: Mapped[str] = mapped_column(String(60), default="")
+    sighting_count: Mapped[int] = mapped_column(Integer, default=0)
+    watchlist: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
 
 class Project(Base, TimestampMixin):
@@ -74,6 +79,9 @@ class Report(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text, default="")  # markdown
     versions: Mapped[list] = mapped_column(JSON, default=list)  # [{ts, content}]
     status: Mapped[str] = mapped_column(String(20), default="draft", index=True)
+    pdf_path: Mapped[str] = mapped_column(String(500), default="")
+    confluence_page_id: Mapped[str] = mapped_column(String(120), default="")
+    confluence_url: Mapped[str] = mapped_column(String(500), default="")
 
 
 class Prompt(Base, TimestampMixin):

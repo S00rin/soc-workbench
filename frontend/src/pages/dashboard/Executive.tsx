@@ -21,11 +21,22 @@ export default function Executive({ days, onDays, refreshMs }: { days: number; o
     catch (error: any) { toast(error.message, "error"); }
     finally { setBusy(""); }
   }
-  async function saveReport() {
-    setBusy("report");
+  async function downloadPdf() {
+    setBusy("pdf");
+    try { await api.download(`/api/dashboard/executive/brief.pdf?days=${days}`, `executive-brief-${new Date().toISOString().slice(0, 10)}.pdf`); }
+    catch (error: any) { toast(error.message, "error"); }
+    finally { setBusy(""); }
+  }
+  async function saveReport(publish = false) {
+    setBusy(publish ? "publish" : "report");
     try {
-      const report = await api.post(`/api/dashboard/executive/report?days=${days}`);
-      toast(`Saved "${report.title}" to Reports as a draft`, "ok");
+      const report = await api.post(`/api/dashboard/executive/report?days=${days}&publish=${publish}`);
+      if (publish) {
+        const url = report.confluence?.url;
+        toast(url ? `Published to Confluence` : (report.confluence?.error || `Saved "${report.title}"`), url ? "ok" : "error");
+      } else {
+        toast(`Saved "${report.title}" to Reports as PDF`, "ok");
+      }
     } catch (error: any) { toast(error.message, "error"); }
     finally { setBusy(""); }
   }
@@ -46,7 +57,9 @@ export default function Executive({ days, onDays, refreshMs }: { days: number; o
         <div className="pill-toggle" role="group" aria-label="Reporting period">{PERIODS.map(p => <button key={p} className={p === days ? "active" : ""} onClick={() => onDays(p)}>{p}d</button>)}</div>
         <button className="btn-sm" onClick={refresh} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
         <button className="btn-sm" onClick={downloadBrief} disabled={busy !== ""}>Download brief (.md)</button>
-        <button className="btn-sm btn-primary" onClick={saveReport} disabled={busy !== ""}>Save to Reports</button>
+        <button className="btn-sm" onClick={downloadPdf} disabled={busy !== ""}>Download PDF</button>
+        <button className="btn-sm" onClick={() => saveReport(false)} disabled={busy !== ""}>Save to Reports</button>
+        <button className="btn-sm btn-primary" onClick={() => saveReport(true)} disabled={busy !== ""}>Publish to Confluence</button>
       </div>
     </div>
 

@@ -16,18 +16,28 @@ type IoC = {
   related_customer: string;
   notes: string;
   false_positive: boolean;
+  status: string;
+  score: number;
+  last_sighted_at: string;
+  sighting_count: number;
+  watchlist: boolean;
   created_at: string;
 };
 
 const TYPES = ["", "ipv4", "domain", "url", "email", "hash", "custom"];
+const STATUSES = ["", "active", "watchlist", "decaying", "expired", "retired"];
 const SEV: Record<string, string> = { critical: "red", high: "red", medium: "yellow", low: "green" };
+const STATUS_TONE: Record<string, string> = { active: "green", watchlist: "blue", decaying: "yellow", expired: "red", retired: "" };
 
 export default function IoCs() {
   const [iocs, setIocs] = useState<IoC[] | null>(null);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
+  const [status, setStatus] = useState("");
+  const [watchlistOnly, setWatchlistOnly] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
+  const [busy, setBusy] = useState("");
   const toast = useToast();
 
   async function load() {
@@ -35,6 +45,8 @@ export default function IoCs() {
       const params = new URLSearchParams();
       if (q) params.set("q", q);
       if (type) params.set("ioc_type", type);
+      if (status) params.set("status", status);
+      if (watchlistOnly) params.set("watchlist", "true");
       setIocs(await api.get(`/api/iocs?${params}`));
     } catch (e: any) {
       toast(e.message, "error");
@@ -44,7 +56,7 @@ export default function IoCs() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+  }, [type, status, watchlistOnly]);
 
   async function remove(ioc: IoC) {
     if (!confirm(`Delete IoC "${ioc.value}"?`)) return;
@@ -54,6 +66,28 @@ export default function IoCs() {
       setIocs((prev) => prev?.filter((i) => i.id !== ioc.id) ?? null);
     } catch (e: any) {
       toast(e.message, "error");
+    }
+  }
+
+  async function toggleWatch(ioc: IoC) {
+    try {
+      const updated: IoC = await api.patch(`/api/iocs/${ioc.id}`, { watchlist: !ioc.watchlist });
+      setIocs((prev) => prev?.map((row) => row.id === ioc.id ? updated : row) ?? null);
+    } catch (e: any) {
+      toast(e.message, "error");
+    }
+  }
+
+  async function runLifecycle(hunt: boolean) {
+    setBusy(hunt ? "hunt" : "decay");
+    try {
+      const result = await api.post(`/api/iocs/lifecycle/run?hunt=${hunt}`);
+      toast(hunt ? `Retro-hunt sighted ${result.hunt?.sighted ?? 0}` : `Rescored ${Object.values(result.scores || {}).reduce((a: number, b: any) => a + Number(b || 0), 0)} IoCs`, "ok");
+      load();
+    } catch (e: any) {
+      toast(e.message, "error");
+    } finally {
+      setBusy("");
     }
   }
 
@@ -72,8 +106,19 @@ export default function IoCs() {
         <select value={type} onChange={(e) => setType(e.target.value)} style={{ maxWidth: 150 }}>
           {TYPES.map((t) => <option key={t} value={t}>{t || "All types"}</option>)}
         </select>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 150 }}>
+          {STATUSES.map((t) => <option key={t} value={t}>{t || "All statuses"}</option>)}
+        </select>
+        <label className="row" style={{ margin: 0, gap: 6, cursor: "pointer" }}>
+          <input type="checkbox" checked={watchlistOnly} onChange={(e) => setWatchlistOnly(e.target.checked)} style={{ width: "auto" }} />
+          Watchlist
+        </label>
         <button className="btn-sm" onClick={load}>Search</button>
         <span className="spacer" />
+        <button className="btn-sm" onClick={() => api.download("/api/iocs/export/watchlist?fmt=csv", "watchlist.csv")}>Export CSV</button>
+        <button className="btn-sm" onClick={() => api.download("/api/iocs/export/watchlist?fmt=stix", "watchlist.stix.json")}>Export STIX</button>
+        <button className="btn-sm" onClick={() => runLifecycle(false)} disabled={busy !== ""}>{busy === "decay" ? "Scoring…" : "Rescore / decay"}</button>
+        <button className="btn-sm" onClick={() => runLifecycle(true)} disabled={busy !== ""}>{busy === "hunt" ? "Hunting…" : "Splunk retro-hunt"}</button>
         <button className="btn-sm" onClick={() => setExtractOpen(true)}>⌖ Extract from text</button>
         <button className="btn-primary btn-sm" onClick={() => setAddOpen(true)}>+ Add IoC</button>
       </div>
@@ -88,6 +133,9 @@ export default function IoCs() {
                 <th>Value</th>
                 <th>Type</th>
                 <th>Severity</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Sightings</th>
                 <th>Source</th>
                 <th>Added</th>
                 <th></th>
@@ -99,12 +147,19 @@ export default function IoCs() {
                   <td className="mono" style={{ wordBreak: "break-all" }}>
                     {i.value}
                     {i.false_positive && <span className="badge yellow" style={{ marginLeft: 6 }}>FP</span>}
+                    {i.watchlist && <span className="badge blue" style={{ marginLeft: 6 }}>WL</span>}
                   </td>
                   <td><span className="badge blue">{i.ioc_type}</span></td>
                   <td><span className={`badge ${SEV[i.severity] || ""}`}>{i.severity}</span></td>
+                  <td className="mono">{Math.round(i.score ?? 100)}</td>
+                  <td><span className={`badge ${STATUS_TONE[i.status] || ""}`}>{i.status || "active"}</span></td>
+                  <td className="dim">{i.sighting_count || 0}</td>
                   <td className="dim">{i.source || "—"}</td>
                   <td className="dim">{timeAgo(i.created_at)}</td>
-                  <td><button className="btn-sm btn-danger" onClick={() => remove(i)}>Delete</button></td>
+                  <td className="row" style={{ justifyContent: "flex-end" }}>
+                    <button className="btn-sm" onClick={() => toggleWatch(i)}>{i.watchlist ? "Unwatch" : "Watch"}</button>
+                    <button className="btn-sm btn-danger" onClick={() => remove(i)}>Delete</button>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -166,22 +166,26 @@ frontend tests (`src/pages/Dashboard.test.tsx`).
 
 Grouped by horizon. Each item lists what it builds on so the sequencing is clear.
 
-### Now (builds directly on existing modules)
+### Now (implemented)
 
-1. **Silent-sensor and feed-anomaly detection.** Use the sensor library's `eps_estimate` and
-   the intel pipeline's daily yield as baselines; alert (notification + attention item) when
-   a Splunk sourcetype's real EPS drops below X% of expected or a feed's yield collapses.
-   Builds on: technical dashboard metrics, Splunk client, notifier.
-2. **Scheduled executive brief delivery.** Nightly/weekly job renders the executive brief
-   (Markdown → PDF via the existing reportlab/bidi stack, FA/EN), stores it in Reports and
-   publishes to Confluence through the existing Atlassian connection.
-   Builds on: `render_executive_brief`, report_builder, confluence_provider, scheduler.
-3. **IoC lifecycle engine.** Confidence decay by age and source trust, automatic expiry,
-   sighting counts from Splunk retro-hunts (`index=* [values]` bounded search), promotion to
-   "watchlist" export (CSV/STIX) for firewalls/EDR.
-   Builds on: IoC/IoCObservation, `IoCSource.trust_score`, Splunk client.
-4. **Health/readiness endpoint and Prometheus `/metrics`.** Export the technical dashboard
-   counters so existing monitoring stacks can alert on the platform itself.
+1. **Silent-sensor and feed-anomaly detection.** Sensor log sources with a SIEM index are
+   sampled via Splunk (`stats count as events` over `anomaly_splunk_window_minutes`). Live
+   EPS is compared with a rolling sample baseline, falling back to `eps_estimate`. Intel and
+   IoC feed yield is sampled on each collection run. Drops below `anomaly_eps_drop_pct` /
+   `anomaly_feed_drop_pct` (or a near-zero sample against a non-zero baseline) open an
+   `AnomalyEvent`, notify through the configured channel, and appear on the technical
+   dashboard and executive attention list. Recovery auto-resolves the alert.
+2. **Scheduled executive brief delivery.** `brief_*` settings drive a daily/weekly job that
+   renders the brief in EN or FA, writes a real PDF (reportlab + bidi), stores a `Report`,
+   and optionally publishes to Confluence. The executive dashboard can download PDF or
+   publish on demand.
+3. **IoC lifecycle engine.** Score decays with a configurable half-life from last
+   sighting/first seen, weighted by severity, confidence and source trust. Expired and
+   false-positive indicators are retired. Splunk retro-hunt records `IoCSighting` rows.
+   Watchlist export is CSV or STIX 2.1.
+4. **Health/readiness and Prometheus `/metrics`.** `GET /api/health/ready` checks SQLite and
+   the data directory (503 when not ready). `GET /metrics` (and `/api/metrics`) exposes
+   gauges for IoCs, jobs, open anomalies, failing intel sources and backup age.
 
 ### Next (needs A2/A3 foundations)
 

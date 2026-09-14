@@ -3,8 +3,7 @@
 Builds a structured markdown report from selected data sources, optionally
 refined by the LLM. Never invents numbers: when a source has no data it says so.
 
-Export formats: Markdown and HTML fully supported. DOCX supported via
-python-docx. PDF: see export_pdf note (kept dependency-light on purpose).
+Export formats: Markdown, HTML, DOCX, and PDF (reportlab; Farsi is reshaped).
 """
 from __future__ import annotations
 
@@ -121,13 +120,8 @@ def export_docx(content: str, out_dir: Path, name: str) -> Path:
     return path
 
 
-def export_pdf(content: str, out_dir: Path, name: str, title: str = "") -> Path:
-    """PDF export.
+def export_pdf(content: str, out_dir: Path, name: str, title: str = "", language: str = "en") -> Path:
+    """Render Markdown to a real PDF (reportlab). Farsi is reshaped/bidi-reordered."""
+    from .pdf_export import export_markdown_pdf
 
-    Kept dependency-light: we render a print-ready HTML file. Open it and use
-    the browser's 'Save as PDF'. A one-click PDF (weasyprint/wkhtmltopdf) can be
-    added later; see docs/ROADMAP.md. This is documented honestly rather than
-    silently producing a broken PDF.
-    """
-    html_path = export_html(content, out_dir, name, title)
-    return html_path
+    return export_markdown_pdf(content, out_dir, name, title=title, language=language)
